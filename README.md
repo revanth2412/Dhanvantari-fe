@@ -15,46 +15,61 @@ edits, and finalizes it. This repo is the **React SPA** the doctor logs into.
 - Backend repo: https://github.com/revanth2412/Dhanvantari-be
 
 ## Current scope
-Implemented: **authentication + access gating** only.
-- Email/password **and** Google sign-in (via Supabase).
-- First-time **profile registration** for a signed-in user.
-- **Admin-approval gate** (accounts start `pending`; a dashboard appears once approved).
-
-Not yet built (planned): the consultation workflow (patients → consultation →
-audio upload → poll status → review/edit/finalize) and an in-app admin approval
-panel. Approvals are currently done through the backend API (Swagger).
+Implemented: the **full doctor workflow**, with a consistent design system
+("evergreen & saffron") across every screen.
+- **Auth**: email/password **and** Google sign-in (Supabase), 3-step onboarding
+  wizard, admin-approval gate with auto-polling pending screen.
+- **Dashboard**: greeting hero, animated stats, recent sessions & patients.
+- **Patients**: debounced search, create/edit drawer (incl. lifestyle/social
+  history), patient detail with clinical-record timeline.
+- **Consultations**: patient → DPDP consent → capture wizard; record in-browser
+  (MediaRecorder + live waveform) or drag-drop upload; animated 4-step pipeline
+  view that polls until the AI draft is ready; failure recovery (re-process).
+- **Clinical note review**: structured note UI (chief complaint, symptoms,
+  history, vitals, diagnosis, prescriptions table, tests, advice, follow-up,
+  red flags, unclear segments, AI-confidence ring), inline editing (saves a new
+  version), finalize flow, copy-as-text, and the diarized transcript side-by-side.
+- **Admin panel**: approve / reject / promote doctors (pending/approved/rejected tabs).
 
 ## Stack
 - **React 18 + Vite + TypeScript** (strict)
 - **@supabase/supabase-js** — auth (email/password + Google OAuth)
-- **react-router-dom** — routing driven by auth status
-- Plain CSS (styling intentionally minimal; to be revisited)
+- **react-router-dom** — status-driven routing; approved area is code-split (lazy)
+- **gsap** — stagger reveals, count-ups (micro-interactions are plain CSS)
+- **lucide-react** — icons
+- Design system in plain CSS custom properties (`src/styles/tokens.css`)
 - ESLint + Prettier (lint runs at `--max-warnings 0`)
 
 ## Project structure
 ```
 src/
-  config/env.ts             # validated env vars (throws if missing)
+  config/env.ts              # validated env vars (throws if missing)
   lib/
     supabaseClient.ts        # single Supabase client
-    apiClient.ts             # fetch wrapper: attaches Supabase JWT, throws typed ApiError
-  services/
-    authService.ts           # Supabase auth (password + Google)
-    doctorService.ts         # backend /auth/me, /auth/register
-  context/
-    authContext.ts           # React context + AuthStatus type
-    AuthProvider.tsx         # holds session + doctor profile, derives status
-  hooks/useAuth.ts
+    apiClient.ts             # fetch wrapper: JWT + JSON + FormData + typed ApiError
+    format.ts                # dates, ages, initials, status metadata
+    noteText.ts              # ClinicalNote -> plain text (copy/EMR paste)
+    recents.ts               # localStorage recent-sessions cache (no list API yet)
+  types/                     # doctor, patient, consultation, record (mirror backend)
+  services/                  # ALL backend/Supabase calls (auth, doctor, patient,
+                             #   consultation incl. multipart upload, record, admin)
+  context/                   # authContext + AuthProvider (derives AuthStatus)
+  hooks/                     # useAuth, useToast, useDebounce, useReveal (gsap)
   components/
-    GoogleButton.tsx, Spinner.tsx
-  pages/
-    LoginPage.tsx            # email/password + Google; sign in / sign up
-    RegisterProfilePage.tsx  # first-time profile creation -> pending
-    PendingApprovalPage.tsx  # awaiting approval / rejected
-    DashboardPage.tsx        # approved home (placeholder for the flow)
-  App.tsx                    # status-driven routing (each route self-guards)
+    ui/                      # design-system kit: Button, Field, Badge, Avatar,
+                             #   Modal/Drawer, Tabs, Skeleton, EmptyState,
+                             #   EcgLoader, toast/
+    layout/AppLayout.tsx     # sidebar + topbar shell for the approved area
+    patients/                # PatientFormDrawer
+    recorder/                # AudioRecorder (MediaRecorder + waveform)
+    consultation/            # CaptureStage, PipelineStatus, TranscriptPanel
+    note/NotePanel.tsx       # clinical note view/edit/finalize
+  pages/                     # Login, RegisterProfile (wizard), PendingApproval,
+                             #   Dashboard, Patients, PatientDetail,
+                             #   NewConsultation, ConsultationSession, Admin
+  App.tsx                    # status-driven routing; lazy approved-area routes
   main.tsx                   # providers + router
-  styles/index.css
+  styles/                    # tokens.css, base.css, components.css, layout.css, pages.css
 ```
 
 ## Auth & routing flow
@@ -70,7 +85,20 @@ The app routes on a single derived `AuthStatus`:
 | `approved` | good to go | `/` (Dashboard) |
 
 Sequence: **Supabase login** → `GET /auth/me` → (404) **register profile** via
-`POST /auth/register` → **pending** → admin approves (backend) → **approved**.
+`POST /auth/register` → **pending** → admin approves (in-app `/admin` or backend)
+→ **approved**.
+
+## Consultation flow (approved doctors)
+1. **New consultation** (`/consultations/new`): pick/create the patient →
+   confirm recording **consent** (DPDP) → `POST /consultations`.
+2. **Capture**: record in-browser or upload audio → multipart
+   `POST /consultations/{id}/recording` (starts the backend pipeline).
+3. **Pipeline** (`/consultations/{id}`): polls `GET /consultations/{id}` every 3s
+   through `uploaded → transcribing → extracting`; `failed` offers one-click
+   `POST /consultations/{id}/process` retry.
+4. **Review**: on `draft_ready`, the structured note (`GET .../record`) and the
+   diarized transcript (`GET .../transcript`) render side-by-side. Edits `PUT` a
+   **new version**; **Finalize** locks the record and the consultation.
 
 ## Setup & run
 ```bash
@@ -108,7 +136,8 @@ is missing.
 - **Google Cloud**: no change — the OAuth redirect stays the Supabase callback
   `https://<ref>.supabase.co/auth/v1/callback`.
 
-## Approving a doctor (until the admin UI exists)
-With an **admin** token (a doctor whose email is in the backend's
-`BOOTSTRAP_ADMIN_EMAILS`) in Swagger:
+## Approving a doctor
+Sign in as an **admin** (a doctor whose email is in the backend's
+`BOOTSTRAP_ADMIN_EMAILS`) and use the in-app **Approvals** page (`/admin`).
+Swagger remains an alternative:
 `GET /admin/doctors?approval_status=pending` → `POST /admin/doctors/{id}/approve`.

@@ -5,7 +5,12 @@ interface GoogleButtonProps {
 
 export function GoogleButton({ onClick, disabled }: GoogleButtonProps) {
   return (
-    <button type="button" className="btn btn-google" onClick={onClick} disabled={disabled}>
+    <button
+      type="button"
+      className="ui-btn ui-btn--block"
+      onClick={onClick}
+      disabled={disabled}
+    >
       <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden>
         <path
           fill="#4285F4"

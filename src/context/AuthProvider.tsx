@@ -1,11 +1,4 @@
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type ReactNode,
-} from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabaseClient";
 import { authService } from "@/services/authService";
@@ -32,23 +25,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profileLoading, setProfileLoading] = useState(false);
   // Guards against overlapping profile fetches from rapid auth events.
   const fetchToken = useRef(0);
+  // Once we have a profile, later auth events (e.g. TOKEN_REFRESHED when the
+  // tab regains focus) must refresh silently — never flash the app loader.
+  const doctorRef = useRef<Doctor | null>(null);
+  doctorRef.current = doctor;
+  const lastUserId = useRef<string | null>(null);
 
-  const loadProfile = useCallback(async (activeSession: Session | null) => {
-    if (!activeSession) {
-      setDoctor(null);
-      return;
-    }
-    const token = ++fetchToken.current;
-    setProfileLoading(true);
-    try {
-      const profile = await getMyProfile();
-      if (token === fetchToken.current) setDoctor(profile);
-    } catch {
-      if (token === fetchToken.current) setDoctor(null);
-    } finally {
-      if (token === fetchToken.current) setProfileLoading(false);
-    }
-  }, []);
+  const loadProfile = useCallback(
+    async (activeSession: Session | null, { silent = false } = {}) => {
+      if (!activeSession) {
+        setDoctor(null);
+        return;
+      }
+      const token = ++fetchToken.current;
+      if (!silent) setProfileLoading(true);
+      try {
+        const profile = await getMyProfile();
+        if (token === fetchToken.current) setDoctor(profile);
+      } catch {
+        if (token === fetchToken.current) setDoctor(null);
+      } finally {
+        if (token === fetchToken.current && !silent) setProfileLoading(false);
+      }
+    },
+    [],
+  );
 
   useEffect(() => {
     let mounted = true;
@@ -56,6 +57,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     supabase.auth.getSession().then(async ({ data }) => {
       if (!mounted) return;
       setSession(data.session);
+      lastUserId.current = data.session?.user.id ?? null;
       await loadProfile(data.session);
       if (mounted) setInitializing(false);
     });
@@ -64,7 +66,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, newSession) => {
       setSession(newSession);
-      void loadProfile(newSession);
+      const userId = newSession?.user.id ?? null;
+      const sameUser = userId !== null && userId === lastUserId.current;
+      lastUserId.current = userId;
+      // Same user + profile already loaded (token refresh on tab focus):
+      // nothing to fetch, and definitely nothing to show a loader for.
+      if (sameUser && doctorRef.current) return;
+      void loadProfile(newSession, { silent: sameUser });
     });
 
     return () => {
@@ -73,7 +81,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, [loadProfile]);
 
-  const refreshProfile = useCallback(() => loadProfile(session), [loadProfile, session]);
+  // Silent: status polls (pending screen) and post-register refreshes must not
+  // flash the full-screen loader.
+  const refreshProfile = useCallback(
+    () => loadProfile(session, { silent: true }),
+    [loadProfile, session],
+  );
 
   const signOut = useCallback(async () => {
     await authService.signOut();

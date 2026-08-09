@@ -1,0 +1,539 @@
+/* App shell (auto-collapsing sidebar) and the auth split-screen layout. */
+
+/* ================= Auth layout ================= */
+.auth-split {
+  min-height: 100%;
+  display: grid;
+  grid-template-columns: minmax(420px, 44%) 1fr;
+}
+@media (max-width: 900px) {
+  .auth-split {
+    grid-template-columns: 1fr;
+  }
+  .auth-split__brand {
+    display: none;
+  }
+}
+
+.auth-split__brand {
+  position: relative;
+  background: var(--grad-brand-deep);
+  color: #e9f5f0;
+  padding: 48px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  overflow: hidden;
+}
+.auth-split__brand::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(600px 420px at 85% -10%, rgba(34, 201, 157, 0.16), transparent 60%),
+    radial-gradient(520px 380px at -10% 110%, rgba(232, 155, 46, 0.1), transparent 60%);
+  pointer-events: none;
+}
+.auth-orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(70px);
+  opacity: 0.5;
+  animation: float-slow 14s ease-in-out infinite;
+  pointer-events: none;
+}
+.auth-orb--jade {
+  width: 340px;
+  height: 340px;
+  background: rgba(18, 138, 109, 0.55);
+  top: 12%;
+  right: -80px;
+}
+.auth-orb--saffron {
+  width: 260px;
+  height: 260px;
+  background: rgba(232, 155, 46, 0.28);
+  bottom: 8%;
+  left: -60px;
+  animation-delay: -7s;
+}
+
+.auth-brand-row {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.15rem;
+  letter-spacing: -0.01em;
+}
+
+.auth-hero {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  max-width: 460px;
+}
+.auth-hero h1 {
+  color: #f4faf8;
+  font-size: clamp(1.9rem, 2.6vw, 2.6rem);
+  line-height: 1.15;
+}
+.auth-hero p {
+  color: rgba(233, 245, 240, 0.72);
+  font-size: 1rem;
+  line-height: 1.6;
+}
+.auth-hero__points {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-top: 6px;
+}
+.auth-point {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 0.92rem;
+  color: rgba(233, 245, 240, 0.86);
+}
+.auth-point__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: rgba(34, 201, 157, 0.12);
+  color: var(--green-400);
+  border: 1px solid rgba(34, 201, 157, 0.25);
+  flex-shrink: 0;
+}
+.auth-foot {
+  position: relative;
+  z-index: 1;
+  font-size: 0.8rem;
+  color: rgba(233, 245, 240, 0.45);
+}
+
+.auth-split__form {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 24px;
+}
+.auth-form-card {
+  width: 100%;
+  max-width: 400px;
+}
+.auth-form-card > h2 {
+  font-size: 1.5rem;
+  margin-bottom: 4px;
+}
+
+/* Centered narrow layouts (pending / onboarding) */
+.center-screen {
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 24px;
+  background:
+    radial-gradient(720px 420px at 80% -10%, rgba(18, 138, 109, 0.07), transparent 60%),
+    radial-gradient(560px 380px at 0% 110%, rgba(232, 155, 46, 0.06), transparent 60%),
+    var(--bg);
+}
+
+/* ================= App shell ================= */
+.shell {
+  min-height: 100%;
+  display: flex;
+}
+
+/* Auto-collapsing sidebar: rests as a 64px icon rail and expands over the
+   content on hover / keyboard focus. Labels fade+slide in as it opens. */
+.shell__sidebar {
+  position: fixed;
+  inset: 0 auto 0 0;
+  width: var(--sidebar-rail);
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  background: var(--grad-brand-deep);
+  color: #cfe3db;
+  padding: 16px 12px;
+  gap: 8px;
+  overflow: hidden;
+  transition:
+    width var(--dur-med) var(--ease-out),
+    box-shadow var(--dur-med) var(--ease-out);
+  white-space: nowrap;
+}
+.shell__sidebar:hover,
+.shell__sidebar:focus-within {
+  width: var(--sidebar-w);
+  box-shadow: var(--shadow-pop);
+}
+/* Collapsible labels — hidden on the rail, revealed when expanded. */
+.side-label {
+  opacity: 0;
+  transform: translateX(-6px);
+  transition:
+    opacity var(--dur-med) var(--ease-out),
+    transform var(--dur-med) var(--ease-out);
+  pointer-events: none;
+}
+.shell__sidebar:hover .side-label,
+.shell__sidebar:focus-within .side-label {
+  opacity: 1;
+  transform: none;
+  pointer-events: auto;
+}
+.shell__main {
+  flex: 1;
+  margin-left: var(--sidebar-rail);
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 100vh;
+}
+
+.side-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 10px 16px;
+  color: #fff;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.05rem;
+  letter-spacing: -0.01em;
+}
+.side-brand > svg {
+  flex-shrink: 0;
+}
+.side-brand small {
+  display: block;
+  font-family: var(--font-body);
+  font-weight: 500;
+  font-size: 0.68rem;
+  color: rgba(207, 227, 219, 0.55);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.side-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  flex: 1;
+}
+.side-nav__section {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgba(207, 227, 219, 0.4);
+  padding: 16px 12px 6px;
+}
+.side-link {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 9px 11px;
+  border-radius: var(--r-md);
+  color: rgba(207, 227, 219, 0.78);
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition:
+    background var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out),
+    transform var(--dur-fast) var(--ease-out);
+}
+.side-link svg {
+  flex-shrink: 0;
+}
+.side-link:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
+  transform: translateX(2px);
+}
+.side-link--active,
+.side-link--active:hover {
+  background: rgba(34, 201, 157, 0.14);
+  color: #fff;
+  transform: none;
+}
+.side-link--active svg {
+  color: var(--green-400);
+}
+
+.side-cta {
+  margin: 8px 0;
+}
+.side-cta .ui-btn {
+  justify-content: flex-start;
+  padding: 0 11px;
+  gap: 11px;
+  overflow: hidden;
+  /* Flat, even fill inside the dark rail — the default primary gradient's
+     dark corner + glow shadow read as a stray green shade when collapsed. */
+  background: var(--green-500);
+  background-size: auto;
+  box-shadow: none;
+}
+.side-cta .ui-btn:hover:not(:disabled) {
+  background: var(--green-400);
+  color: var(--green-950);
+  box-shadow: none;
+}
+.side-cta .ui-btn svg {
+  flex-shrink: 0;
+}
+
+.side-user {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  margin-top: 8px;
+}
+.side-user__meta {
+  flex: 1;
+  min-width: 0;
+}
+.side-user__name {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.side-user__sub {
+  font-size: 0.72rem;
+  color: rgba(207, 227, 219, 0.5);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.side-user__out {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: rgba(207, 227, 219, 0.6);
+  cursor: pointer;
+  transition:
+    background var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out);
+}
+.side-user__out:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #ff9d94;
+}
+
+/* Page container */
+.page {
+  flex: 1;
+  width: 100%;
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 22px 28px 56px;
+  animation: rise-in var(--dur-slow) var(--ease-out);
+}
+.page--wide {
+  max-width: 1380px;
+}
+
+.page-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 22px;
+  flex-wrap: wrap;
+}
+.page-head h1 {
+  font-size: 1.45rem;
+}
+.page-head__sub {
+  color: var(--muted);
+  font-size: 0.92rem;
+  margin-top: 3px;
+}
+
+/* ================= Mobile bottom tab bar ================= */
+/* Hidden on desktop; the sidebar covers navigation there. */
+.tabbar {
+  display: none;
+}
+.sheet,
+.sheet-overlay {
+  display: none;
+}
+
+@media (max-width: 820px) {
+  /* Sidebar out, floating tab bar in. */
+  .shell__sidebar {
+    display: none;
+  }
+  .shell__main {
+    margin-left: 0;
+  }
+  .page {
+    padding: calc(16px + var(--safe-top)) 14px
+      calc(var(--tabbar-h) + var(--safe-bottom) + 40px);
+  }
+  /* Auth / onboarding screens sit outside the shell — inset them too. */
+  .center-screen,
+  .auth-split__form {
+    padding: calc(24px + var(--safe-top)) 16px calc(24px + var(--safe-bottom));
+  }
+  .page-head h1 {
+    font-size: 1.28rem;
+  }
+
+  .tabbar {
+    position: fixed;
+    left: 12px;
+    right: 12px;
+    bottom: calc(10px + var(--safe-bottom));
+    z-index: 60;
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
+    height: var(--tabbar-h);
+    padding: 0 4px;
+    background: rgba(10, 33, 27, 0.93);
+    backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.09);
+    border-radius: 22px;
+    box-shadow: 0 14px 34px -10px rgba(6, 18, 15, 0.55);
+    animation: rise-in var(--dur-slow) var(--ease-out);
+  }
+
+  .sheet-overlay {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    background: rgba(6, 18, 15, 0.5);
+    backdrop-filter: blur(4px);
+    animation: fade-in var(--dur-med) var(--ease-out);
+  }
+  .sheet {
+    display: flex;
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 101;
+    flex-direction: column;
+    gap: 16px;
+    padding: 10px 18px calc(22px + var(--safe-bottom));
+    background: var(--surface);
+    border-radius: var(--r-xl) var(--r-xl) 0 0;
+    box-shadow: var(--shadow-pop);
+    animation: sheet-up var(--dur-slow) var(--ease-out);
+  }
+}
+
+.tabbar__item {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  border: none;
+  background: none;
+  padding: 0;
+  color: rgba(207, 227, 219, 0.6);
+  font-family: inherit;
+  font-size: 0.63rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    color var(--dur-fast) var(--ease-out),
+    transform var(--dur-fast) var(--ease-spring);
+}
+.tabbar__item:active {
+  transform: scale(0.9);
+}
+.tabbar__item--active {
+  color: #fff;
+}
+.tabbar__item--active svg {
+  color: var(--green-400);
+}
+.tabbar__item--spacer {
+  pointer-events: none;
+}
+
+/* Raised record button — the app's primary action. */
+.tabbar__fab {
+  flex: 0 0 auto;
+  width: 54px;
+  height: 54px;
+  margin-top: -24px;
+  border-radius: 50%;
+  border: 3px solid var(--bg);
+  background: var(--grad-brand);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 10px 24px -8px rgba(18, 138, 109, 0.75);
+  -webkit-tap-highlight-color: transparent;
+  transition: transform var(--dur-fast) var(--ease-spring);
+}
+.tabbar__fab:active {
+  transform: scale(0.88);
+}
+
+.sheet__grabber {
+  width: 38px;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--border-strong);
+  margin: 0 auto 4px;
+}
+.sheet__head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.sheet__facts {
+  display: flex;
+  flex-direction: column;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  padding: 4px 14px;
+}
+
+@keyframes sheet-up {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: none;
+  }
+}

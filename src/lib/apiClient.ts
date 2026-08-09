@@ -16,6 +16,8 @@ interface RequestOptions {
   method?: string;
   /** JSON body — serialized automatically. */
   body?: unknown;
+  /** Multipart body (e.g. audio upload) — sent as-is, no Content-Type header. */
+  formData?: FormData;
   /** Send the auth token (default true). */
   auth?: boolean;
   signal?: AbortSignal;
@@ -30,7 +32,7 @@ interface RequestOptions {
  */
 export async function apiRequest<T>(
   path: string,
-  { method = "GET", body, auth = true, signal }: RequestOptions = {},
+  { method = "GET", body, formData, auth = true, signal }: RequestOptions = {},
 ): Promise<T> {
   const headers: Record<string, string> = {};
 
@@ -50,7 +52,7 @@ export async function apiRequest<T>(
   const response = await fetch(`${env.apiBaseUrl}${path}`, {
     method,
     headers,
-    body: body !== undefined ? JSON.stringify(body) : undefined,
+    body: formData ?? (body !== undefined ? JSON.stringify(body) : undefined),
     signal,
   });
 

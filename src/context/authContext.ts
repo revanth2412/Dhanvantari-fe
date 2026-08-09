@@ -12,12 +12,7 @@ import type { Doctor } from "@/types/doctor";
  *  - approved:        good to go
  */
 export type AuthStatus =
-  | "loading"
-  | "unauthenticated"
-  | "unregistered"
-  | "pending"
-  | "rejected"
-  | "approved";
+  "loading" | "unauthenticated" | "unregistered" | "pending" | "rejected" | "approved";
 
 export interface AuthContextValue {
   session: Session | null;

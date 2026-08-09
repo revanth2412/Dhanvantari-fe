@@ -7,8 +7,9 @@ Read it before making changes. Keep it updated when structure or conventions cha
 Dhanvantari is an AI clinical-documentation product for doctors: record a
 consultation → backend transcribes (ElevenLabs Scribe) → LLM extracts a
 structured clinical note (Google Gemini) → doctor reviews/edits/finalizes.
-**This repo is the doctor-facing React SPA.** It currently implements only
-**auth + access gating**; the consultation workflow is not built yet.
+**This repo is the doctor-facing React SPA.** It implements the full workflow:
+auth + approval gating, dashboard, patients (search/create/detail), the
+consultation capture → pipeline → note-review flow, and the admin approvals panel.
 
 ## System context (where this repo sits)
 ```
@@ -34,8 +35,10 @@ to the backend, which verifies it and maps the user to a `doctors` row.
 ## Tech stack
 - React 18, Vite 5, TypeScript 5 (strict; `noUnusedLocals`/`noUnusedParameters`)
 - `@supabase/supabase-js` v2 — auth
-- `react-router-dom` v6 — routing
-- Plain CSS. ESLint (`--max-warnings 0`) + Prettier.
+- `react-router-dom` v6 — routing (approved-area pages are `React.lazy` code-split)
+- `gsap` — stagger reveals / count-ups; `lucide-react` — icons
+- Plain-CSS design system (tokens in CSS custom properties). ESLint
+  (`--max-warnings 0`) + Prettier.
 - Path alias: `@/` → `src/` (configured in `vite.config.ts` + `tsconfig.json`).
 
 ## Directory map & responsibilities
@@ -44,21 +47,67 @@ src/
   config/env.ts            # reads + validates VITE_* env; throws if missing. Single source of env truth.
   lib/
     supabaseClient.ts       # the ONLY place createClient() is called
-    apiClient.ts            # apiRequest<T>(path, opts): base URL + JWT header + JSON + typed ApiError
-  services/                 # all backend/Supabase calls live here (no fetch/supabase calls in components)
-    authService.ts          # supabase.auth: signInWithPassword, signUp, signInWithGoogle, signOut
-    doctorService.ts        # getMyProfile() -> Doctor|null (404->null), registerProfile(input)
+    apiClient.ts            # apiRequest<T>(path, opts): base URL + JWT + JSON body or FormData + typed ApiError
+    format.ts               # dates/ages/initials/duration + consultationStatusMeta
+    haptics.ts              # haptic(pattern) — Vibration API; no-ops off touch devices
+    noteText.ts             # ClinicalNote -> plain text (copy to clipboard / EMR)
+    recents.ts              # localStorage recent-sessions cache (backend has no list-consultations API)
+  types/                    # doctor, patient, consultation, record — mirror backend Pydantic schemas
+  services/                 # ALL backend/Supabase calls live here (no fetch/supabase in components)
+    authService.ts          # supabase.auth wrappers
+    doctorService.ts        # /auth/me, /auth/register
+    patientService.ts       # /patients CRUD + search
+    consultationService.ts  # create, get, multipart recording upload, process (retry), transcript
+    recordService.ts        # consultation record, update (new version), finalize, patient history
+    adminService.ts         # /admin/doctors list/approve/reject/make-admin
   context/
-    authContext.ts          # createContext + types (AuthStatus, AuthContextValue). NO component here (fast-refresh).
-    AuthProvider.tsx        # owns session + doctor state; derives AuthStatus; subscribes to onAuthStateChange
-  hooks/useAuth.ts          # useContext wrapper; throws if used outside provider
-  components/               # presentational, reusable (GoogleButton, Spinner)
-  pages/                    # one screen each (Login, RegisterProfile, PendingApproval, Dashboard)
-  App.tsx                   # status-driven routing; RouteFor guards each route
-  main.tsx                  # <BrowserRouter><AuthProvider><App/>
-  types/doctor.ts           # Doctor, DoctorRegisterInput — mirror backend DoctorOut
-  styles/index.css
+    authContext.ts          # createContext + types (AuthStatus). NO component here (fast-refresh).
+    AuthProvider.tsx        # session + doctor state; derives AuthStatus; silent refreshes for polling
+  hooks/                    # useAuth, useToast, useDebounce (search), useReveal (gsap stagger)
+  components/
+    ui/                     # design-system kit: Button, Field(Text/TextArea/Select/Check),
+                            #   Badge, Avatar, Modal+Drawer, Tabs, Skeleton, EmptyState,
+                            #   EcgLoader (brand loader), toast/ (provider + context)
+    layout/AppLayout.tsx    # approved-area shell: auto-collapsing sidebar + <Outlet/>
+    layout/MobileTabBar.tsx # mobile-only bottom tab bar + record FAB + account sheet
+    patients/PatientFormDrawer.tsx   # create/edit patient incl. social history
+    recorder/AudioRecorder.tsx       # MediaRecorder + live canvas waveform + pause/resume
+    consultation/           # CaptureStage (record|upload tabs), PipelineStatus (4-step
+                            #   animated stepper), TranscriptPanel (diarized segments)
+    note/NotePanel.tsx      # clinical note: view sections, inline edit -> PUT new version,
+                            #   finalize modal, confidence ring, copy-as-text
+  pages/                    # one screen each: Login (split hero), RegisterProfile (wizard),
+                            #   PendingApproval (auto-poll), Dashboard, Patients,
+                            #   PatientDetail, NewConsultation (wizard), ConsultationSession
+                            #   (pipeline poll + review), Admin
+  App.tsx                   # status-driven routing; RouteFor guards; AdminRoute; lazy routes
+  main.tsx                  # <BrowserRouter><AuthProvider><ToastProvider><App/>
+  styles/                   # tokens.css (design tokens — edit colors HERE), base.css
+                            #   (reset + keyframes), components.css (ui-kit classes),
+                            #   layout.css (shell/auth), pages.css (per-page)
 ```
+
+## Design system (keep it consistent)
+- **One design language**: "evergreen & saffron". All colors/radii/shadows/motion
+  come from CSS variables in `styles/tokens.css` — never hardcode hex values in
+  component styles.
+- **Class naming**: `.ui-<component>[__element][--modifier]` in `components.css`;
+  page-specific classes live in `pages.css`.
+- **Motion**: micro-interactions are pure CSS (keyframes in `base.css`); GSAP is
+  used for stagger reveals (`useReveal`) and count-ups. Respect
+  `prefers-reduced-motion` (handled globally in `base.css`).
+- **New UI**: reuse `components/ui/*` (Button, Field, Badge, Modal…) instead of
+  ad-hoc markup so every screen stays visually coherent.
+- **Responsive**: one breakpoint drives the mobile shell — **820px**. Below it the
+  sidebar is hidden, `MobileTabBar` appears, modals/drawers become bottom sheets,
+  touch targets grow to 44px, inputs go to 16px (stops iOS zoom-on-focus), and
+  note cards drop their height cap so the page scrolls instead of each card.
+  Safe-area insets come from `--safe-top` / `--safe-bottom` in `tokens.css`.
+- **Haptics**: `Button` and `Tabs` fire automatically; call `haptic()` directly
+  only for non-button moments (recording start/stop, toasts). Never gate logic on
+  it — it silently no-ops on desktop and iOS Safari.
+- **Scroll containers**: don't add `overscroll-behavior: contain` to anything that
+  isn't always scrollable — it swallows the wheel and freezes the page scroll.
 
 ## Coding conventions (follow these)
 - **Layering:** components/pages → hooks/context → services → lib. Components must
@@ -67,7 +116,8 @@ src/
 - **Types:** keep `src/types/*` in sync with backend Pydantic schemas. Prefer
   explicit interfaces over `any`.
 - **Env:** never read `import.meta.env` outside `config/env.ts`.
-- **Errors:** backend errors surface as `ApiError { status, message, detail }`.
+- **Errors:** backend errors surface as `ApiError { status, message, detail }`;
+  user-facing failures go through `useToast()`.
 - **New API calls:** add a function in the relevant `services/*.ts`, typed, using
   `apiRequest<T>()`. Don't inline URLs in components.
 - **Keep it green:** `npm run build` (tsc + vite) and `npm run lint` must pass
@@ -97,9 +147,14 @@ Base URL = `VITE_API_BASE_URL`. All authed requests send `Authorization: Bearer 
 `DoctorOut` shape (see `src/types/doctor.ts`):
 `{ id, full_name, email, phone, specialty, registration_no, active, role ("doctor"|"admin"), approval_status ("pending"|"approved"|"rejected"), created_at, updated_at }`.
 
-Clinical endpoints exist on the backend (`/patients`, `/consultations`,
-`/consultations/{id}/recording`, `/consultations/{id}/record`, `/records/*`) and
-require an **approved** doctor — the FE for these is not built yet.
+Clinical endpoints (all require an **approved** doctor; see backend AGENTS.md for
+bodies): `/patients` CRUD+search, `POST /consultations`,
+`POST /consultations/{id}/recording` (multipart `file`),
+`POST /consultations/{id}/process` (retry), `GET /consultations/{id}` (+
+`/transcript`, `/record`), `GET/PUT /records/{id}`, `POST /records/{id}/finalize`,
+`GET /patients/{id}/records`. All are wired into `services/*`.
+**There is no list-consultations endpoint** — the dashboard's "recent sessions"
+come from `lib/recents.ts` (localStorage).
 
 ## Environment variables
 `.env` (see `.env.example`), all prefixed `VITE_`:
@@ -114,17 +169,18 @@ require an **approved** doctor — the FE for these is not built yet.
 - `npm run format` — prettier
 
 ## Implemented vs TODO
-Implemented: Supabase auth (email/password + Google), profile registration,
-approval gating, pending/rejected screens, approved dashboard placeholder.
+Implemented: auth (email/password + Google), onboarding wizard, approval gating
+with auto-poll, dashboard (stats + recents), patients (search/create/edit/detail
++ record timeline), consultation flow (consent → record/upload → animated
+pipeline with 3s polling → failure retry), clinical note review (view, inline
+edit → new version, finalize, copy), diarized transcript panel, admin approvals.
 
 TODO (likely next tasks):
-1. **Consultation flow** in the Dashboard: patient search/create → start
-   consultation → upload audio (`multipart` to `/consultations/{id}/recording`)
-   → poll `GET /consultations/{id}` until `draft_ready` → view/edit/finalize the
-   note (`/records/*`). Add `patientService.ts`, `consultationService.ts`,
-   `recordService.ts` and matching pages/components.
-2. **Admin panel** (role === "admin"): list pending doctors + approve/reject
-   buttons calling `/admin/*`. Add `adminService.ts` + an admin route.
+1. **Backend list-consultations endpoint** — then replace `lib/recents.ts`
+   localStorage cache with real data.
+2. **Version history UI** — `GET /patients/{id}/records` already returns every
+   version; expose a version picker on the note.
+3. **Print/PDF prescription export** from the finalized note.
 
 ## Gotchas
 - **`config/env.ts` throws** at startup if a `VITE_*` var is missing (by design).
