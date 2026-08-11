@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/Button";
 
 function AccountSheet({ onClose }: { onClose: () => void }) {
   const { doctor, signOut } = useAuth();
+  const navigate = useNavigate();
   const isAdmin = doctor?.role === "admin";
 
   useEffect(() => {
@@ -57,6 +58,16 @@ function AccountSheet({ onClose }: { onClose: () => void }) {
           </div>
         </div>
 
+        <Button
+          block
+          onClick={() => {
+            onClose();
+            navigate("/profile");
+          }}
+        >
+          <User size={16} /> Edit profile
+        </Button>
+
         <Button variant="danger-soft" block onClick={() => void signOut()}>
           <LogOut size={16} /> Sign out
         </Button>
@@ -83,7 +94,7 @@ export function MobileTabBar() {
   return (
     <>
       <nav className="tabbar" aria-label="Primary">
-        <NavLink to="/" end className={itemClass} onClick={() => haptic("selection")}>
+        <NavLink to="/dashboard" className={itemClass} onClick={() => haptic("selection")}>
           <Home size={20} />
           <span>Home</span>
         </NavLink>

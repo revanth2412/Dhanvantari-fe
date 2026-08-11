@@ -3,7 +3,7 @@ import { ArrowLeft, ArrowRight, Stethoscope } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { registerProfile } from "@/services/doctorService";
 import { Button } from "@/components/ui/Button";
-import { TextField } from "@/components/ui/Field";
+import { TextAreaField, TextField } from "@/components/ui/Field";
 
 const SPECIALTIES = [
   "General Medicine",
@@ -29,6 +29,7 @@ export function RegisterProfilePage() {
   const [phone, setPhone] = useState("");
   const [specialty, setSpecialty] = useState("");
   const [registrationNo, setRegistrationNo] = useState("");
+  const [address, setAddress] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -41,6 +42,7 @@ export function RegisterProfilePage() {
         specialty: specialty.trim() || null,
         registration_no: registrationNo.trim() || null,
         phone: phone.trim() || null,
+        address: address.trim() || null,
       });
       await refreshProfile();
     } catch (err) {
@@ -137,6 +139,13 @@ export function RegisterProfilePage() {
               placeholder="e.g. KMC/12345"
               hint="Helps your admin verify and approve you faster."
             />
+            <TextAreaField
+              label="Practice address"
+              value={address}
+              onChange={(e) => setAddress(e.target.value)}
+              rows={2}
+              placeholder="Clinic or hospital address"
+            />
           </div>
         )}
 
@@ -158,6 +167,10 @@ export function RegisterProfilePage() {
               <div>
                 <dt>Registration no.</dt>
                 <dd>{registrationNo.trim() || "—"}</dd>
+              </div>
+              <div>
+                <dt>Practice address</dt>
+                <dd>{address.trim() || "—"}</dd>
               </div>
             </dl>
             <p className="muted" style={{ fontSize: "0.86rem" }}>

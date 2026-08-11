@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, FileText, HeartPulse, Mic, Pencil, PhoneOff } from "lucide-react";
 import { getPatient } from "@/services/patientService";
@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Skeleton, SkeletonRows } from "@/components/ui/Skeleton";
 import { PatientFormDrawer } from "@/components/patients/PatientFormDrawer";
+import { useCachedQuery } from "@/hooks/useCachedQuery";
 import { useReveal } from "@/hooks/useReveal";
 
 function lifestyleEntries(sh: SocialHistory | undefined): Array<[string, string]> {
@@ -56,28 +57,23 @@ function latestPerConsultation(records: ClinicalRecord[]): ClinicalRecord[] {
 export function PatientDetailPage() {
   const { patientId } = useParams<{ patientId: string }>();
   const navigate = useNavigate();
-  const [patient, setPatient] = useState<Patient | null>(null);
-  const [records, setRecords] = useState<ClinicalRecord[] | null>(null);
   const [editOpen, setEditOpen] = useState(false);
-  const revealRef = useReveal<HTMLDivElement>("[data-reveal]", [patient?.id]);
 
-  useEffect(() => {
-    if (!patientId) return;
-    let cancelled = false;
-    getPatient(patientId).then((p) => {
-      if (!cancelled) setPatient(p);
-    });
-    getPatientRecords(patientId)
-      .then((r) => {
-        if (!cancelled) setRecords(r);
-      })
-      .catch(() => {
-        if (!cancelled) setRecords([]);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [patientId]);
+  // Cached: returning to a patient you already opened is instant.
+  const patientQuery = useCachedQuery<Patient>(
+    `patient:${patientId}`,
+    () => getPatient(patientId!),
+    { enabled: Boolean(patientId) },
+  );
+  const recordsQuery = useCachedQuery<ClinicalRecord[]>(
+    `patient:${patientId}:records`,
+    () => getPatientRecords(patientId!),
+    { enabled: Boolean(patientId) },
+  );
+
+  const patient = patientQuery.data ?? null;
+  const records = recordsQuery.loading ? null : (recordsQuery.data ?? []);
+  const revealRef = useReveal<HTMLDivElement>("[data-reveal]", [patient?.id]);
 
   const age = ageFromDob(patient?.dob);
   const lifestyle = lifestyleEntries(patient?.social_history);
@@ -249,7 +245,7 @@ export function PatientDetailPage() {
         open={editOpen}
         onClose={() => setEditOpen(false)}
         patient={patient}
-        onSaved={setPatient}
+        onSaved={patientQuery.mutate}
       />
     </main>
   );

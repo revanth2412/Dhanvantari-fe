@@ -40,6 +40,16 @@ export function reprocessConsultation(consultationId: string): Promise<Consultat
   });
 }
 
+/**
+ * Soft-discard a consultation (`status -> discarded`). The owning doctor or an
+ * admin may discard; a finalized consultation cannot be (409).
+ */
+export function discardConsultation(consultationId: string): Promise<Consultation> {
+  return apiRequest<Consultation>(`/consultations/${consultationId}/discard`, {
+    method: "POST",
+  });
+}
+
 /** Latest diarized transcript (404 while not ready). */
 export function getTranscript(consultationId: string): Promise<Transcript> {
   return apiRequest<Transcript>(`/consultations/${consultationId}/transcript`);

@@ -49,8 +49,7 @@ export function AppLayout() {
 
         <nav className="side-nav">
           <NavLink
-            to="/"
-            end
+            to="/dashboard"
             className={linkClass}
             title="Dashboard"
             onClick={releaseFocus}
@@ -80,7 +79,19 @@ export function AppLayout() {
           )}
         </nav>
 
-        <div className="side-user">
+        <div
+          className="side-user side-user--profile"
+          role="button"
+          tabIndex={0}
+          title="Open profile settings"
+          onClick={() => navigate("/profile")}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              navigate("/profile");
+            }
+          }}
+        >
           <Avatar name={doctor?.full_name} size={32} />
           <div className="side-user__meta side-label">
             <div className="side-user__name">{doctor?.full_name}</div>
@@ -92,7 +103,10 @@ export function AppLayout() {
             type="button"
             className="side-user__out side-label"
             title="Sign out"
-            onClick={() => void signOut()}
+            onClick={(e) => {
+              e.stopPropagation();
+              void signOut();
+            }}
           >
             <LogOut size={16} />
           </button>

@@ -5,6 +5,7 @@ import type { Patient, PatientCreateInput } from "@/types/patient";
 import { Button } from "@/components/ui/Button";
 import { CheckField, SelectField, TextField } from "@/components/ui/Field";
 import { Drawer } from "@/components/ui/Modal";
+import { useDataCache } from "@/hooks/useDataCache";
 import { useToast } from "@/hooks/useToast";
 
 interface PatientFormDrawerProps {
@@ -98,6 +99,7 @@ export function PatientFormDrawer({
   onSaved,
 }: PatientFormDrawerProps) {
   const toast = useToast();
+  const cache = useDataCache();
   const [form, setForm] = useState<FormState>(EMPTY);
   const [showLifestyle, setShowLifestyle] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -127,6 +129,9 @@ export function PatientFormDrawer({
       const saved = patient
         ? await updatePatient(patient.id, payload)
         : await createPatient(payload);
+      // Lists are now stale; the detail entry can be updated in place.
+      cache.invalidate("patients:list");
+      cache.set(`patient:${saved.id}`, saved);
       toast({
         kind: "success",
         title: editing ? "Patient updated" : "Patient added",

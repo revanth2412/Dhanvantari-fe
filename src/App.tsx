@@ -32,6 +32,9 @@ const ConsultationSessionPage = lazy(() =>
 const AdminPage = lazy(() =>
   import("@/pages/AdminPage").then((m) => ({ default: m.AdminPage })),
 );
+const ProfilePage = lazy(() =>
+  import("@/pages/ProfilePage").then((m) => ({ default: m.ProfilePage })),
+);
 
 /** The single place each auth status is allowed to be. */
 function homePathFor(status: AuthStatus): string {
@@ -68,6 +71,11 @@ function AdminRoute({ children }: { children: ReactNode }) {
   const { doctor } = useAuth();
   if (doctor?.role !== "admin") return <Navigate to="/" replace />;
   return <>{children}</>;
+}
+
+function WorkspaceHome() {
+  const { doctor } = useAuth();
+  return <Navigate to={doctor?.role === "admin" ? "/admin" : "/dashboard"} replace />;
 }
 
 export default function App() {
@@ -116,7 +124,9 @@ export default function App() {
             <RouteFor allow={["approved"]} status={status} element={<AppLayout />} />
           }
         >
-          <Route index element={<DashboardPage />} />
+          <Route index element={<WorkspaceHome />} />
+          <Route path="dashboard" element={<DashboardPage />} />
+          <Route path="profile" element={<ProfilePage />} />
           <Route path="patients" element={<PatientsPage />} />
           <Route path="patients/:patientId" element={<PatientDetailPage />} />
           <Route path="consultations/new" element={<NewConsultationPage />} />

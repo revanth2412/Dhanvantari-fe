@@ -1,5 +1,10 @@
 import { apiRequest, ApiError } from "@/lib/apiClient";
-import type { Doctor, DoctorRegisterInput } from "@/types/doctor";
+import type {
+  Doctor,
+  DoctorRegisterInput,
+  DoctorSelfUpdateInput,
+  DoctorUpdateInput,
+} from "@/types/doctor";
 
 /**
  * Fetch the authenticated doctor's profile.
@@ -20,4 +25,26 @@ export async function getMyProfile(): Promise<Doctor | null> {
 /** Create the doctor profile for the authenticated Supabase user. */
 export async function registerProfile(input: DoctorRegisterInput): Promise<Doctor> {
   return apiRequest<Doctor>("/auth/register", { method: "POST", body: input });
+}
+
+/**
+ * Update the signed-in doctor's own profile (`PATCH /auth/me`).
+ * Only name, phone, address, specialty and registration number are editable —
+ * email is tied to the auth account, and role/approval/active are admin-only.
+ */
+export async function updateMyProfile(input: DoctorSelfUpdateInput): Promise<Doctor> {
+  return apiRequest<Doctor>("/auth/me", { method: "PATCH", body: input });
+}
+
+/** `GET /doctors/{doctor_id}` — load a doctor's current profile details. */
+export function getDoctor(doctorId: string): Promise<Doctor> {
+  return apiRequest<Doctor>(`/doctors/${doctorId}`);
+}
+
+/**
+ * `PATCH /doctors/{doctor_id}` — update the profile fields exposed in Settings.
+ * Account access controls intentionally stay out of the self-service UI.
+ */
+export function updateDoctor(doctorId: string, input: DoctorUpdateInput): Promise<Doctor> {
+  return apiRequest<Doctor>(`/doctors/${doctorId}`, { method: "PATCH", body: input });
 }

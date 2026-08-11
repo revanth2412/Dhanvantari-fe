@@ -7,7 +7,9 @@ export type ConsultationStatus =
   | "extracting"
   | "draft_ready"
   | "finalized"
-  | "failed";
+  | "failed"
+  /** Soft-deleted by the owning doctor or an admin; hidden from listings. */
+  | "discarded";
 
 export interface Consultation {
   id: string;

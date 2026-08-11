@@ -93,6 +93,7 @@ export const consultationStatusMeta: Record<
   draft_ready: { label: "Draft ready", tone: "warn" },
   finalized: { label: "Finalized", tone: "ok" },
   failed: { label: "Failed", tone: "danger" },
+  discarded: { label: "Discarded", tone: "neutral" },
 };
 
 export function greetingForNow(): string {

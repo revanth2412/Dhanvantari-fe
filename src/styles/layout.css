@@ -305,6 +305,24 @@
   border-top: 1px solid rgba(255, 255, 255, 0.08);
   margin-top: 8px;
 }
+.side-user--profile {
+  cursor: pointer;
+  transition: background var(--dur-med) var(--ease-out);
+}
+.side-user--profile:hover,
+.side-user--profile:focus-visible {
+  background: rgba(255, 255, 255, 0.06);
+  outline: none;
+}
+.side-user--profile:focus-visible {
+  box-shadow: inset 0 0 0 2px var(--green-400);
+}
+.side-user--profile .ui-avatar {
+  transition: transform var(--dur-med) var(--ease-spring);
+}
+.side-user--profile:hover .ui-avatar {
+  transform: scale(1.08);
+}
 .side-user__meta {
   flex: 1;
   min-width: 0;

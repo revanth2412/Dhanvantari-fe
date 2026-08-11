@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import gsap from "gsap";
 import {
@@ -22,6 +22,7 @@ import { BrandMark } from "@/components/ui/BrandMark";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { SkeletonRows } from "@/components/ui/Skeleton";
+import { useCachedQuery } from "@/hooks/useCachedQuery";
 import { useReveal } from "@/hooks/useReveal";
 
 /** Statuses that mean the backend is still working on a session. */
@@ -89,26 +90,16 @@ function QuickTile({ icon, label, tone = "jade", badge, onClick }: QuickTileProp
 export function DashboardPage() {
   const { doctor } = useAuth();
   const navigate = useNavigate();
-  const [patients, setPatients] = useState<Patient[] | null>(null);
   const recents = useMemo<RecentSession[]>(
     () => (doctor ? getRecentSessions(doctor.id) : []),
     [doctor],
   );
+  // Shares its cache entry with the Patients page's unfiltered list.
+  const { data, loading } = useCachedQuery<Patient[]>("patients:list:", () =>
+    searchPatients(),
+  );
+  const patients = loading ? null : (data ?? []);
   const revealRef = useReveal<HTMLDivElement>("[data-reveal]", [patients !== null]);
-
-  useEffect(() => {
-    let cancelled = false;
-    searchPatients()
-      .then((list) => {
-        if (!cancelled) setPatients(list);
-      })
-      .catch(() => {
-        if (!cancelled) setPatients([]);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
 
   const draftCount = recents.filter((r) => r.status === "draft_ready").length;
   const finalizedCount = recents.filter((r) => r.status === "finalized").length;

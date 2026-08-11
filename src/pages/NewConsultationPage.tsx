@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Check, Search, ShieldCheck, UserPlus } from "lucide-react";
 import { searchPatients } from "@/services/patientService";
@@ -8,16 +8,19 @@ import { ageFromDob } from "@/lib/format";
 import type { Patient } from "@/types/patient";
 import type { Consultation } from "@/types/consultation";
 import { useAuth } from "@/hooks/useAuth";
+import { useCachedQuery } from "@/hooks/useCachedQuery";
 import { useDebounce } from "@/hooks/useDebounce";
 import { useToast } from "@/hooks/useToast";
 import { Avatar } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/Button";
-import { CheckField, TextField } from "@/components/ui/Field";
+import { TextField } from "@/components/ui/Field";
 import { SkeletonRows } from "@/components/ui/Skeleton";
 import { PatientFormDrawer } from "@/components/patients/PatientFormDrawer";
 import { CaptureStage } from "@/components/consultation/CaptureStage";
 
-const STEPS = ["Patient", "Consent", "Start consultation"] as const;
+/** Consent is confirmed once per patient at registration, not per visit, so the
+ *  flow is just: pick the patient, then record. */
+const STEPS = ["Patient", "Start consultation"] as const;
 
 export function NewConsultationPage() {
   const navigate = useNavigate();
@@ -30,47 +33,45 @@ export function NewConsultationPage() {
     [location.state],
   );
 
-  const [step, setStep] = useState(presetPatient ? 1 : 0);
+  const [step, setStep] = useState(0);
   const [patient, setPatient] = useState<Patient | null>(presetPatient);
   const [query, setQuery] = useState("");
   const debouncedQuery = useDebounce(query, 280);
-  const [results, setResults] = useState<Patient[] | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [consent, setConsent] = useState(false);
   const [starting, setStarting] = useState(false);
   const [consultation, setConsultation] = useState<Consultation | null>(null);
+  // A consultation is a DB row — never create two for one intent (StrictMode
+  // double-invokes effects in dev, and the pick handler can be double-tapped).
+  const startedRef = useRef(false);
 
-  useEffect(() => {
-    if (step !== 0) return;
-    const controller = new AbortController();
-    setResults(null);
-    searchPatients(debouncedQuery, controller.signal)
-      .then(setResults)
-      .catch((err: unknown) => {
-        if (!(err instanceof DOMException && err.name === "AbortError")) {
-          setResults([]);
-        }
-      });
-    return () => controller.abort();
-  }, [debouncedQuery, step]);
+  const { data: results, loading: searching } = useCachedQuery<Patient[]>(
+    `patients:list:${debouncedQuery.trim()}`,
+    () => searchPatients(debouncedQuery),
+    { enabled: step === 0 },
+  );
 
-  async function startSession() {
-    if (!patient || !doctor) return;
+  async function startSession(target: Patient) {
+    if (!doctor || startedRef.current) return;
+    startedRef.current = true;
+    setPatient(target);
     setStarting(true);
     try {
       const created = await createConsultation({
-        patient_id: patient.id,
+        patient_id: target.id,
+        // Consent is captured with the patient record; the backend still
+        // requires this flag before it will accept audio.
         consent_confirmed: true,
       });
       setConsultation(created);
       rememberSession(doctor.id, {
         consultationId: created.id,
-        patientId: patient.id,
-        patientName: patient.full_name,
+        patientId: target.id,
+        patientName: target.full_name,
         status: created.status,
       });
-      setStep(2);
+      setStep(1);
     } catch (err) {
+      startedRef.current = false;
       toast({
         kind: "error",
         title: "Could not start the session",
@@ -80,6 +81,15 @@ export function NewConsultationPage() {
       setStarting(false);
     }
   }
+
+  // Arriving from a patient's page ("Start consultation") skips straight to
+  // recording — the patient is already chosen.
+  useEffect(() => {
+    if (presetPatient && doctor && !startedRef.current) {
+      void startSession(presetPatient);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [presetPatient, doctor]);
 
   function handleUploaded() {
     if (consultation && doctor && patient) {
@@ -128,7 +138,7 @@ export function NewConsultationPage() {
               <div>
                 <h1 style={{ fontSize: "1.25rem" }}>Who is this consultation for?</h1>
                 <p className="page-head__sub">
-                  Pick an existing patient or add a new one.
+                  Pick a patient to begin recording straight away.
                 </p>
               </div>
               <Button onClick={() => setDrawerOpen(true)}>
@@ -147,9 +157,9 @@ export function NewConsultationPage() {
             <div
               style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 16 }}
             >
-              {results === null ? (
+              {searching ? (
                 <SkeletonRows rows={4} height={56} />
-              ) : results.length === 0 ? (
+              ) : (results ?? []).length === 0 ? (
                 <p className="muted" style={{ textAlign: "center", padding: "24px 0" }}>
                   No patients found.{" "}
                   <button
@@ -169,110 +179,36 @@ export function NewConsultationPage() {
                   </button>
                 </p>
               ) : (
-                results.map((p) => {
-                  const selected = patient?.id === p.id;
-                  return (
-                    <button
-                      key={p.id}
-                      type="button"
-                      className={`pt-pick ${selected ? "pt-pick--selected" : ""}`}
-                      onClick={() => {
-                        setPatient(p);
-                        setStep(1);
-                      }}
-                    >
-                      <Avatar name={p.full_name} size={40} />
-                      <span style={{ flex: 1, minWidth: 0 }}>
-                        <span style={{ display: "block", fontWeight: 600 }}>
-                          {p.full_name}
-                        </span>
-                        <span className="muted" style={{ fontSize: "0.8rem" }}>
-                          {[ageFromDob(p.dob), p.gender, p.phone]
-                            .filter(Boolean)
-                            .join(" · ") || "No details"}
-                        </span>
+                (results ?? []).map((p) => (
+                  <button
+                    key={p.id}
+                    type="button"
+                    className="pt-pick"
+                    disabled={starting}
+                    onClick={() => void startSession(p)}
+                  >
+                    <Avatar name={p.full_name} size={40} />
+                    <span style={{ flex: 1, minWidth: 0 }}>
+                      <span style={{ display: "block", fontWeight: 600 }}>
+                        {p.full_name}
                       </span>
-                      {selected && (
-                        <Check size={18} style={{ color: "var(--primary)" }} />
-                      )}
-                    </button>
-                  );
-                })
+                      <span className="muted" style={{ fontSize: "0.8rem" }}>
+                        {[ageFromDob(p.dob), p.gender, p.phone]
+                          .filter(Boolean)
+                          .join(" · ") || "No details"}
+                      </span>
+                    </span>
+                  </button>
+                ))
               )}
             </div>
           </div>
         )}
 
-        {step === 1 && patient && (
+        {step === 1 && consultation && patient && (
           <div
             className="wiz-pane"
-            style={{ display: "flex", flexDirection: "column", gap: 18 }}
-          >
-            <div className="pt-pick pt-pick--selected" style={{ cursor: "default" }}>
-              <Avatar name={patient.full_name} size={40} />
-              <span style={{ flex: 1 }}>
-                <span style={{ display: "block", fontWeight: 600 }}>
-                  {patient.full_name}
-                </span>
-                <span className="muted" style={{ fontSize: "0.8rem" }}>
-                  {[ageFromDob(patient.dob), patient.gender, patient.phone]
-                    .filter(Boolean)
-                    .join(" · ") || "No details"}
-                </span>
-              </span>
-              {!presetPatient && (
-                <Button variant="ghost" size="sm" onClick={() => setStep(0)}>
-                  Change
-                </Button>
-              )}
-            </div>
-
-            <div className="consent-card">
-              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                <ShieldCheck size={20} style={{ color: "var(--primary)" }} />
-                <h2 style={{ fontSize: "1rem" }}>Recording consent</h2>
-              </div>
-              <ul>
-                <li>The patient has been told this consultation will be recorded.</li>
-                <li>The recording is used only to prepare their clinical note.</li>
-                <li>Audio is stored securely and every access is audit-logged.</li>
-              </ul>
-              <CheckField
-                label={
-                  <>
-                    <strong>{patient.full_name}</strong> has verbally consented to this
-                    consultation being recorded.
-                  </>
-                }
-                checked={consent}
-                onChange={(e) => setConsent(e.target.checked)}
-              />
-            </div>
-
-            <div style={{ display: "flex", justifyContent: "space-between" }}>
-              <Button
-                variant="ghost"
-                onClick={() => (presetPatient ? navigate(-1) : setStep(0))}
-              >
-                Back
-              </Button>
-              <Button
-                variant="primary"
-                size="lg"
-                disabled={!consent}
-                loading={starting}
-                onClick={() => void startSession()}
-              >
-                Begin session
-              </Button>
-            </div>
-          </div>
-        )}
-
-        {step === 2 && consultation && patient && (
-          <div
-            className="wiz-pane"
-            style={{ display: "flex", flexDirection: "column", gap: 16 }}
+            style={{ display: "flex", flexDirection: "column", gap: 14 }}
           >
             <div className="page-head" style={{ marginBottom: 0 }}>
               <div>
@@ -283,6 +219,15 @@ export function NewConsultationPage() {
                 </p>
               </div>
             </div>
+
+            {/* Consent is no longer a blocking step, but the obligation stands —
+                keep it visible without making the doctor click through it. */}
+            <p className="consent-note">
+              <ShieldCheck size={15} />
+              Confirm <strong>{patient.full_name}</strong> is aware this consultation is
+              being recorded. Audio is stored securely and every access is audit-logged.
+            </p>
+
             <CaptureStage consultationId={consultation.id} onUploaded={handleUploaded} />
           </div>
         )}
@@ -291,10 +236,7 @@ export function NewConsultationPage() {
       <PatientFormDrawer
         open={drawerOpen}
         onClose={() => setDrawerOpen(false)}
-        onSaved={(p) => {
-          setPatient(p);
-          setStep(1);
-        }}
+        onSaved={(p) => void startSession(p)}
       />
     </main>
   );

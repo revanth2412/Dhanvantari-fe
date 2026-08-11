@@ -9,6 +9,7 @@ export interface Doctor {
   phone: string | null;
   specialty: string | null;
   registration_no: string | null;
+  address: string | null;
   active: boolean;
   role: Role;
   approval_status: ApprovalStatus;
@@ -22,4 +23,27 @@ export interface DoctorRegisterInput {
   phone?: string | null;
   specialty?: string | null;
   registration_no?: string | null;
+  address?: string | null;
+}
+
+/**
+ * Payload for `PATCH /auth/me` (backend `DoctorSelfUpdate`).
+ * Email, role, approval status and active flag are deliberately absent —
+ * email is tied to the auth account and the rest are admin-controlled.
+ */
+export interface DoctorSelfUpdateInput {
+  full_name?: string | null;
+  phone?: string | null;
+  address?: string | null;
+  specialty?: string | null;
+  registration_no?: string | null;
+}
+
+/** Editable fields accepted by `PATCH /doctors/{doctor_id}`. */
+export interface DoctorUpdateInput {
+  full_name?: string | null;
+  phone?: string | null;
+  specialty?: string | null;
+  registration_no?: string | null;
+  address?: string | null;
 }

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ChevronRight, Search, UserPlus, Users } from "lucide-react";
 import { searchPatients } from "@/services/patientService";
@@ -11,6 +11,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { TextField } from "@/components/ui/Field";
 import { SkeletonRows } from "@/components/ui/Skeleton";
 import { PatientFormDrawer } from "@/components/patients/PatientFormDrawer";
+import { useCachedQuery } from "@/hooks/useCachedQuery";
 import { useDebounce } from "@/hooks/useDebounce";
 import { useReveal } from "@/hooks/useReveal";
 
@@ -18,22 +19,16 @@ export function PatientsPage() {
   const navigate = useNavigate();
   const [query, setQuery] = useState("");
   const debouncedQuery = useDebounce(query, 280);
-  const [patients, setPatients] = useState<Patient[] | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const revealRef = useReveal<HTMLDivElement>("tbody tr", [patients]);
 
-  useEffect(() => {
-    const controller = new AbortController();
-    setPatients(null);
-    searchPatients(debouncedQuery, controller.signal)
-      .then(setPatients)
-      .catch((err: unknown) => {
-        if (!(err instanceof DOMException && err.name === "AbortError")) {
-          setPatients([]);
-        }
-      });
-    return () => controller.abort();
-  }, [debouncedQuery]);
+  // Cached per search term, so revisiting the page (or a repeated search)
+  // renders instantly instead of re-hitting the API.
+  const { data, loading } = useCachedQuery<Patient[]>(
+    `patients:list:${debouncedQuery.trim()}`,
+    () => searchPatients(debouncedQuery),
+  );
+  const patients = loading ? null : (data ?? []);
+  const revealRef = useReveal<HTMLDivElement>("tbody tr", [patients]);
 
   return (
     <main className="page">
