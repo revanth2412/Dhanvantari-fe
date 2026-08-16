@@ -1,7 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-/* Owned by this route: keeps ~40% of the stylesheet out of the workspace bundle. */
-import "@/styles/landing.css";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { BrandMark } from "@/components/ui/BrandMark";

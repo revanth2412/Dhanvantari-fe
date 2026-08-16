@@ -68,6 +68,8 @@
     box-shadow 0.45s ease,
     transform 0.45s cubic-bezier(0.16, 1, 0.3, 1);
   white-space: nowrap;
+  box-sizing: border-box;
+  overflow: hidden;
 }
 
 .mv-navbar-wrapper--scrolled {
@@ -84,6 +86,7 @@
     0 14px 34px -8px rgba(18, 114, 90, 0.16),
     0 0 24px -4px rgba(32, 201, 151, 0.12);
   transform: scale(0.992);
+  overflow: hidden;
 }
 
 .mv-brand {
@@ -156,6 +159,8 @@
   gap: 18px;
   white-space: nowrap;
   flex-shrink: 1;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .mv-navbar__links a {
@@ -177,6 +182,16 @@
   gap: 10px;
   white-space: nowrap;
   flex-shrink: 0;
+  min-width: 0;
+}
+
+/* When scrolled and space is tight, let the actions shrink */
+.mv-navbar-wrapper--scrolled .mv-navbar__actions {
+  flex-shrink: 1;
+}
+.mv-navbar-wrapper--scrolled .mv-navbar__actions .mv-btn {
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* --------------------------------------------------------------------------
@@ -2143,7 +2158,8 @@
     display: flex;
     align-items: center;
     gap: 6px;
-    flex-shrink: 0;
+    flex-shrink: 1;
+    min-width: 0;
   }
 
   .mv-navbar__actions .mv-btn--emerald {
@@ -2151,6 +2167,16 @@
     font-size: 0.76rem;
     height: 32px;
     border-radius: var(--r-full);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+  }
+
+  /* Scrolled navbar on mobile: even tighter */
+  .mv-navbar-wrapper--scrolled .mv-navbar {
+    height: 44px;
+    padding: 0 10px;
+    gap: 8px;
   }
 
   .mv-hero-section {
