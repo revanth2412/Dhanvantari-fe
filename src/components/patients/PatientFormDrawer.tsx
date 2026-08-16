@@ -16,9 +16,41 @@ interface PatientFormDrawerProps {
   onSaved: (patient: Patient) => void;
 }
 
+export const POPULAR_COUNTRY_CODES = [
+  { code: "+91", country: "India", flag: "🇮🇳" },
+  { code: "+1", country: "US / Canada", flag: "🇺🇸" },
+  { code: "+44", country: "United Kingdom", flag: "🇬🇧" },
+  { code: "+971", country: "UAE", flag: "🇦🇪" },
+  { code: "+65", country: "Singapore", flag: "🇸🇬" },
+  { code: "+61", country: "Australia", flag: "🇦🇺" },
+  { code: "+966", country: "Saudi Arabia", flag: "🇸🇦" },
+  { code: "+49", country: "Germany", flag: "🇩🇪" },
+  { code: "+33", country: "France", flag: "🇫🇷" },
+  { code: "+81", country: "Japan", flag: "🇯🇵" },
+  { code: "+60", country: "Malaysia", flag: "🇲🇾" },
+  { code: "+880", country: "Bangladesh", flag: "🇧🇩" },
+  { code: "+977", country: "Nepal", flag: "🇳🇵" },
+  { code: "+94", country: "Sri Lanka", flag: "🇱🇰" },
+] as const;
+
+function parsePhone(raw?: string | null): { countryCode: string; phoneNum: string } {
+  if (!raw) return { countryCode: "+91", phoneNum: "" };
+  const trimmed = raw.trim();
+  for (const item of POPULAR_COUNTRY_CODES) {
+    if (trimmed.startsWith(item.code)) {
+      return {
+        countryCode: item.code,
+        phoneNum: trimmed.slice(item.code.length).trim(),
+      };
+    }
+  }
+  return { countryCode: "+91", phoneNum: trimmed };
+}
+
 interface FormState {
   full_name: string;
-  phone: string;
+  country_code: string;
+  phone_number: string;
   dob: string;
   gender: string;
   language_pref: string;
@@ -34,7 +66,8 @@ interface FormState {
 
 const EMPTY: FormState = {
   full_name: "",
-  phone: "",
+  country_code: "+91",
+  phone_number: "",
   dob: "",
   gender: "",
   language_pref: "",
@@ -50,9 +83,11 @@ const EMPTY: FormState = {
 
 function fromPatient(patient: Patient): FormState {
   const sh = patient.social_history ?? {};
+  const { countryCode, phoneNum } = parsePhone(patient.phone);
   return {
     full_name: patient.full_name,
-    phone: patient.phone ?? "",
+    country_code: countryCode,
+    phone_number: phoneNum,
     dob: patient.dob ?? "",
     gender: patient.gender ?? "",
     language_pref: patient.language_pref ?? "",
@@ -69,6 +104,9 @@ function fromPatient(patient: Patient): FormState {
 
 function toPayload(form: FormState): PatientCreateInput {
   const opt = (v: string) => (v.trim() ? v.trim() : null);
+  const formattedPhone = form.phone_number.trim()
+    ? `${form.country_code} ${form.phone_number.trim()}`
+    : null;
   const social = {
     occupation: opt(form.occupation),
     residence: opt(form.residence),
@@ -83,7 +121,7 @@ function toPayload(form: FormState): PatientCreateInput {
   );
   return {
     full_name: form.full_name.trim(),
-    phone: opt(form.phone),
+    phone: formattedPhone,
     dob: opt(form.dob),
     gender: opt(form.gender),
     language_pref: opt(form.language_pref),
@@ -163,6 +201,20 @@ export function PatientFormDrawer({
       }
     >
       <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+        {error && (
+          <div
+            style={{
+              padding: "10px 14px",
+              borderRadius: "var(--r-md)",
+              background: "var(--danger-soft)",
+              color: "var(--danger)",
+              fontSize: "0.85rem",
+              fontWeight: 600,
+            }}
+          >
+            {error}
+          </div>
+        )}
         <TextField
           label="Full name"
           required
@@ -171,13 +223,32 @@ export function PatientFormDrawer({
           placeholder="Patient's full name"
           autoFocus
         />
+
+        {/* Phone number with separate country code selector */}
+        <div className="ui-field">
+          <label className="ui-field__label">Phone number</label>
+          <div style={{ display: "grid", gridTemplateColumns: "115px 1fr", gap: 8 }}>
+            <SelectField
+              value={form.country_code}
+              onChange={(e) => set("country_code", e.target.value)}
+              aria-label="Country Code"
+            >
+              {POPULAR_COUNTRY_CODES.map((c) => (
+                <option key={c.code} value={c.code}>
+                  {c.flag} {c.code}
+                </option>
+              ))}
+            </SelectField>
+            <TextField
+              value={form.phone_number}
+              onChange={(e) => set("phone_number", e.target.value)}
+              placeholder="98765 43210"
+              inputMode="tel"
+            />
+          </div>
+        </div>
+
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-          <TextField
-            label="Phone"
-            value={form.phone}
-            onChange={(e) => set("phone", e.target.value)}
-            placeholder="+91…"
-          />
           <TextField
             label="Date of birth"
             type="date"
@@ -194,12 +265,14 @@ export function PatientFormDrawer({
             <option value="male">Male</option>
             <option value="other">Other</option>
           </SelectField>
-          <TextField
-            label="Preferred language"
-            value={form.language_pref}
-            onChange={(e) => set("language_pref", e.target.value)}
-            placeholder="e.g. Telugu"
-          />
+          <div style={{ gridColumn: "1 / -1" }}>
+            <TextField
+              label="Preferred language"
+              value={form.language_pref}
+              onChange={(e) => set("language_pref", e.target.value)}
+              placeholder="e.g. Hindi, Telugu, English, Tamil"
+            />
+          </div>
         </div>
         <CheckField
           label="Do not call — exclude from phone follow-ups"

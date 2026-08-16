@@ -165,28 +165,29 @@
   z-index: 40;
   display: flex;
   flex-direction: column;
-  background: var(--grad-brand-deep);
+  background: linear-gradient(180deg, #04100c 0%, #061813 50%, #030d0a 100%);
+  border-right: 1px solid rgba(95, 224, 188, 0.14);
   color: #cfe3db;
   padding: 16px 12px;
   gap: 8px;
   overflow: hidden;
   transition:
-    width var(--dur-med) var(--ease-out),
-    box-shadow var(--dur-med) var(--ease-out);
+    width 0.3s cubic-bezier(0.34, 1.56, 0.64, 1),
+    box-shadow 0.3s ease;
   white-space: nowrap;
 }
 .shell__sidebar:hover,
 .shell__sidebar:focus-within {
   width: var(--sidebar-w);
-  box-shadow: var(--shadow-pop);
+  box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.6), 0 0 30px -5px rgba(32, 201, 151, 0.15);
 }
 /* Collapsible labels — hidden on the rail, revealed when expanded. */
 .side-label {
   opacity: 0;
   transform: translateX(-6px);
   transition:
-    opacity var(--dur-med) var(--ease-out),
-    transform var(--dur-med) var(--ease-out);
+    opacity 0.25s cubic-bezier(0.34, 1.56, 0.64, 1),
+    transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
   pointer-events: none;
 }
 .shell__sidebar:hover .side-label,
@@ -208,93 +209,138 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 6px 10px 16px;
+  padding: 4px 6px 14px;
   color: #fff;
   font-family: var(--font-display);
   font-weight: 700;
   font-size: 1.05rem;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.02em;
 }
-.side-brand > svg {
+.side-brand__icon {
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border-radius: 9px;
+  background: linear-gradient(135deg, var(--green-400), var(--green-600));
+  color: var(--green-950);
+  box-shadow: 0 0 14px rgba(32, 201, 151, 0.45);
   flex-shrink: 0;
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.shell__sidebar:hover .side-brand__icon {
+  transform: scale(1.06) rotate(-3deg);
+}
+.side-brand b {
+  color: var(--green-300);
+  font-weight: 800;
+  margin-left: 2px;
 }
 .side-brand small {
   display: block;
   font-family: var(--font-body);
-  font-weight: 500;
-  font-size: 0.68rem;
+  font-weight: 600;
+  font-size: 0.64rem;
   color: rgba(207, 227, 219, 0.55);
-  letter-spacing: 0.08em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
 }
 
 .side-nav {
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 4px;
   flex: 1;
 }
 .side-nav__section {
-  font-size: 0.68rem;
+  font-size: 0.66rem;
   font-weight: 700;
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: rgba(207, 227, 219, 0.4);
-  padding: 16px 12px 6px;
+  padding: 14px 12px 4px;
 }
 .side-link {
   display: flex;
   align-items: center;
   gap: 11px;
   padding: 9px 11px;
-  border-radius: var(--r-md);
-  color: rgba(207, 227, 219, 0.78);
-  font-size: 0.9rem;
+  border-radius: 10px;
+  color: rgba(207, 227, 219, 0.75);
+  font-size: 0.88rem;
   font-weight: 500;
   transition:
-    background var(--dur-fast) var(--ease-out),
-    color var(--dur-fast) var(--ease-out),
-    transform var(--dur-fast) var(--ease-out);
+    background 0.2s ease,
+    color 0.2s ease,
+    transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 .side-link svg {
   flex-shrink: 0;
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), color 0.2s ease;
 }
 .side-link:hover {
-  background: rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.07);
   color: #fff;
-  transform: translateX(2px);
+  transform: translateX(3px);
+}
+.side-link:hover svg {
+  transform: scale(1.1);
+  color: var(--green-300);
 }
 .side-link--active,
 .side-link--active:hover {
-  background: rgba(34, 201, 157, 0.14);
+  background: linear-gradient(90deg, rgba(32, 201, 151, 0.2) 0%, rgba(32, 201, 151, 0.06) 100%);
+  border: 1px solid rgba(95, 224, 188, 0.3);
   color: #fff;
+  font-weight: 600;
   transform: none;
 }
 .side-link--active svg {
   color: var(--green-400);
 }
 
-.side-cta {
-  margin: 8px 0;
+.side-rec {
+  margin: 6px 0 8px;
 }
-.side-cta .ui-btn {
+.side-rec .ui-btn,
+.side-rec__btn.ui-btn {
+  width: 100%;
+  height: 38px;
+  min-height: 38px;
+  display: flex;
+  align-items: center;
   justify-content: flex-start;
-  padding: 0 11px;
   gap: 11px;
-  overflow: hidden;
-  /* Flat, even fill inside the dark rail — the default primary gradient's
-     dark corner + glow shadow read as a stray green shade when collapsed. */
-  background: var(--green-500);
-  background-size: auto;
-  box-shadow: none;
-}
-.side-cta .ui-btn:hover:not(:disabled) {
-  background: var(--green-400);
+  padding: 0 11px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, var(--green-400), var(--green-600));
   color: var(--green-950);
-  box-shadow: none;
+  font-size: 0.88rem;
+  font-weight: 700;
+  box-shadow: 0 4px 14px rgba(32, 201, 151, 0.35);
+  border: none;
+  overflow: hidden;
+  transition:
+    transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1),
+    box-shadow 0.2s ease,
+    background 0.2s ease;
 }
-.side-cta .ui-btn svg {
+.side-rec .ui-btn svg,
+.side-rec__btn.ui-btn svg {
   flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.side-rec .ui-btn:hover:not(:disabled),
+.side-rec__btn.ui-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #38e1b6, var(--green-400));
+  box-shadow: 0 6px 20px rgba(32, 201, 151, 0.5);
+  transform: translateX(2px);
+}
+.side-rec .ui-btn:hover svg,
+.side-rec__btn.ui-btn:hover svg {
+  transform: scale(1.12);
 }
 
 .side-user {
@@ -342,23 +388,34 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
+.side-user__actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
 .side-user__out {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
+  width: 30px;
+  height: 30px;
   border: none;
   border-radius: var(--r-sm);
   background: transparent;
-  color: rgba(207, 227, 219, 0.6);
+  color: rgba(207, 227, 219, 0.65);
   cursor: pointer;
   transition:
     background var(--dur-fast) var(--ease-out),
-    color var(--dur-fast) var(--ease-out);
+    color var(--dur-fast) var(--ease-out),
+    transform var(--dur-fast) var(--ease-spring);
 }
 .side-user__out:hover {
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--green-300);
+  transform: scale(1.08);
+}
+.side-user__out--logout:hover {
+  background: rgba(239, 68, 68, 0.15);
   color: #ff9d94;
 }
 

@@ -1,6 +1,6 @@
-# Dhanvantari — Frontend
+# MediVaani — Frontend
 
-Doctor-facing web app for **Dhanvantari**, an AI clinical-documentation product:
+Doctor-facing web app for **MediVaani**, an AI clinical-documentation product:
 a doctor records a consultation, the backend transcribes it (ElevenLabs Scribe)
 and extracts a structured clinical note (Google Gemini), and the doctor reviews,
 edits, and finalizes it. This repo is the **React SPA** the doctor logs into.

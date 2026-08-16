@@ -98,7 +98,7 @@ export function LoginPage() {
 
         <div className="auth-brand-row" data-reveal>
           <Activity size={22} color="#22c99d" />
-          Dhanvantari
+          MediVaani
         </div>
 
         <div className="auth-hero">
@@ -108,7 +108,7 @@ export function LoginPage() {
             <span className="grad-text">We&rsquo;ll write the note.</span>
           </h1>
           <p data-reveal>
-            Dhanvantari listens to the consultation, transcribes it with medical-grade
+            MediVaani listens to the consultation, transcribes it with medical-grade
             accuracy, and drafts a structured clinical note you review and sign off.
           </p>
           <div className="auth-hero__points">
@@ -183,7 +183,7 @@ export function LoginPage() {
             className="muted"
             style={{ textAlign: "center", marginTop: 18, fontSize: "0.9rem" }}
           >
-            {mode === "signin" ? "New to Dhanvantari?" : "Already have an account?"}{" "}
+            {mode === "signin" ? "New to MediVaani?" : "Already have an account?"}{" "}
             <button
               type="button"
               className="link"

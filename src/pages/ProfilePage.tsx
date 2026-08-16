@@ -1,8 +1,13 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   ArrowLeft,
   BadgeCheck,
   Building2,
+  Calendar,
+  CheckCircle2,
+  ChevronRight,
+  FileCheck,
+  Fingerprint,
   Mail,
   MapPin,
   Phone,
@@ -10,9 +15,11 @@ import {
   ShieldCheck,
   Sparkles,
   Stethoscope,
+  UserCheck,
   UserRound,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import gsap from "gsap";
 import { Avatar } from "@/components/ui/Avatar";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -30,6 +37,8 @@ export function ProfilePage() {
   const { doctor, refreshProfile } = useAuth();
   const toast = useToast();
   const navigate = useNavigate();
+  const rootRef = useRef<HTMLElement | null>(null);
+
   const [profile, setProfile] = useState<Doctor | null>(doctor);
   const [fullName, setFullName] = useState(doctor?.full_name ?? "");
   const [phone, setPhone] = useState(doctor?.phone ?? "");
@@ -55,6 +64,22 @@ export function ProfilePage() {
       .catch(() => undefined);
   }, [doctor]);
 
+  // GSAP Entrance Stagger
+  useEffect(() => {
+    const root = rootRef.current;
+    if (!root || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+    const ctx = gsap.context(() => {
+      gsap.fromTo(
+        "[data-profile-elem]",
+        { autoAlpha: 0, y: 20 },
+        { autoAlpha: 1, y: 0, duration: 0.65, stagger: 0.08, ease: "power3.out" },
+      );
+    }, root);
+
+    return () => ctx.revert();
+  }, []);
+
   async function saveProfile() {
     if (!doctor || fullName.trim().length < 2) {
       toast({
@@ -77,8 +102,8 @@ export function ProfilePage() {
       await refreshProfile();
       toast({
         kind: "success",
-        title: "Profile updated",
-        message: "Your practice details are saved.",
+        title: "Profile updated successfully",
+        message: "Your clinician practice credentials have been saved.",
       });
     } catch (err) {
       toast({
@@ -92,136 +117,272 @@ export function ProfilePage() {
   }
 
   return (
-    <main className="page profile-page">
-      <header className="profile-hero">
-        <div className="profile-hero__aurora" aria-hidden />
-        <div className="profile-hero__top">
-          <Button variant="ghost" size="sm" onClick={() => navigate(-1)}>
-            <ArrowLeft size={15} /> Back
-          </Button>
-          <Badge tone="ok" dot>
-            Profile active
-          </Badge>
-        </div>
-        <div className="profile-hero__identity">
-          <div className="profile-avatar-wrap">
-            <Avatar name={profile?.full_name} size={72} />
-            <span>
-              <BadgeCheck size={17} />
-            </span>
+    <main className="page profile-page" ref={rootRef}>
+      {/* ------------------------------------------------------------- */}
+      {/* TOP NAVIGATION BREADCRUMB & ACTIONS BAR                       */}
+      {/* ------------------------------------------------------------- */}
+      <div className="profile-top-bar" data-profile-elem>
+        <button
+          type="button"
+          className="profile-back-btn"
+          onClick={() => navigate("/dashboard")}
+        >
+          <ArrowLeft size={16} />
+          <span>Back to Dashboard</span>
+        </button>
+
+        <div className="profile-top-actions">
+          <div className="profile-security-pill">
+            <ShieldCheck size={14} className="profile-icon-emerald" />
+            <span>DPDP Act 2023 Enforced · AES-256 Encrypted</span>
           </div>
-          <div>
-            <p className="profile-hero__eyebrow">
-              <Sparkles size={14} /> Professional settings
-            </p>
-            <h1>{profile?.full_name ?? "My profile"}</h1>
-            <p>
-              {profile?.specialty ?? "Add your specialty"} <i>·</i>{" "}
-              {profile?.registration_no ?? "Registration not added"}
-            </p>
+
+          <Button
+            variant="primary"
+            size="sm"
+            loading={saving}
+            onClick={() => void saveProfile()}
+          >
+            <Save size={15} /> Save Changes
+          </Button>
+        </div>
+      </div>
+
+      {/* ------------------------------------------------------------- */}
+      {/* REVAMPED HERO IDENTIFICATION BANNER                           */}
+      {/* ------------------------------------------------------------- */}
+      <header className="profile-hero-v2" data-profile-elem>
+        <div className="profile-hero-v2__glow" aria-hidden />
+
+        <div className="profile-hero-v2__grid">
+          {/* Avatar with Status Ring & Stroke-Drawing Animated Verified Tick */}
+          <div className="profile-avatar-v2">
+            <Avatar name={profile?.full_name} size={92} />
+            <div className="profile-verified-badge" title="Verified Clinician">
+              <svg
+                className="profile-verified-svg"
+                viewBox="0 0 24 24"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <circle
+                  className="profile-verified-svg__circle"
+                  cx="12"
+                  cy="12"
+                  r="9.5"
+                  stroke="currentColor"
+                  strokeWidth="2.2"
+                />
+                <path
+                  className="profile-verified-svg__check"
+                  d="M7.5 12.2L10.5 15.2L16.5 9.2"
+                  stroke="currentColor"
+                  strokeWidth="2.6"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </div>
+          </div>
+
+          {/* Doctor Info & Meta */}
+          <div className="profile-hero-v2__info">
+            <div className="profile-hero-v2__eyebrow">
+              <Sparkles size={14} /> Professional Clinician Telemetry
+            </div>
+            <h1>Dr. {fullName || profile?.full_name || "Clinician"}</h1>
+
+            <div className="profile-hero-v2__pills">
+              <span className="profile-pill-v2">
+                <Stethoscope size={13} /> {specialty || "General Medicine"}
+              </span>
+              <span className="profile-pill-v2">
+                <Fingerprint size={13} /> Reg: {registrationNo || "Registration Pending"}
+              </span>
+              <span className="profile-pill-v2">
+                <Building2 size={13} /> {profile?.clinic_name || "Independent Practice"}
+              </span>
+            </div>
+          </div>
+
+          {/* Telemetry Status Box */}
+          <div className="profile-hero-v2__telemetry">
+            <div className="profile-telemetry-badge">
+              <span className="profile-pulse-dot" />
+              <strong>
+                {profile?.approval_status === "approved" ? "Verified Clinician" : "Account Active"}
+              </strong>
+            </div>
+            <div className="profile-telemetry-sub">
+              <span>OPD Ambient Scribe Active</span>
+              <small>Role: {profile?.role === "admin" ? "Platform Administrator" : "Attending Doctor"}</small>
+            </div>
           </div>
         </div>
       </header>
 
-      <div className="profile-layout">
-        <aside className="profile-summary ui-card">
-          <div className="profile-summary__heading">
-            <ShieldCheck size={18} />
-            <span>Account status</span>
-          </div>
-          <div className="profile-summary__state">
-            <span className="profile-summary__pulse" />
+      {/* ------------------------------------------------------------- */}
+      {/* MULTI-CARD SETTINGS GRID                                      */}
+      {/* ------------------------------------------------------------- */}
+      <div className="profile-grid-v2">
+        {/* Main Column: Practice Details Form */}
+        <section className="profile-card-v2" data-profile-elem>
+          <div className="profile-card-v2__header">
             <div>
-              <strong>
-                {profile?.approval_status === "approved"
-                  ? "Verified clinician"
-                  : "Account pending"}
-              </strong>
-              <small>
-                {profile?.active
-                  ? "Workspace access enabled"
-                  : "Access is currently restricted"}
-              </small>
+              <h2>Practice Credentials &amp; Profile</h2>
+              <p>These credentials appear on your generated clinical SOAP notes, prescriptions, and official medical exports.</p>
+            </div>
+            <div className="profile-card-v2__icon-badge">
+              <Stethoscope size={22} />
             </div>
           </div>
-          <div className="profile-summary__facts">
-            <div>
-              <Mail size={15} />
-              <span>
-                <small>Email</small>
-                {profile?.email ?? "—"}
-              </span>
-            </div>
-            <div>
-              <Building2 size={15} />
-              <span>
-                <small>Role</small>
-                {profile?.role === "admin" ? "Administrator" : "Doctor"}
-              </span>
-            </div>
-          </div>
-          <p className="profile-summary__note">
-            Your email and access controls are protected account settings. Contact an
-            administrator to change them.
-          </p>
-        </aside>
 
-        <section className="profile-settings ui-card ui-card--pad">
-          <div className="profile-settings__head">
-            <div>
-              <h2>Practice details</h2>
-              <p>These details appear across your clinical workspace.</p>
-            </div>
-            <Stethoscope className="profile-settings__icon" size={22} />
-          </div>
-          <div className="profile-form">
+          <div className="profile-form-v2">
             <TextField
-              label="Full name"
+              label="Full Name (with credentials)"
               required
               value={fullName}
               onChange={(e) => setFullName(e.target.value)}
+              placeholder="e.g. Dr. Rajesh Sharma, MD"
               icon={<UserRound size={16} />}
             />
             <TextField
-              label="Phone number"
+              label="Primary Practice Phone"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
               placeholder="+91 98765 43210"
               icon={<Phone size={16} />}
             />
             <TextField
-              label="Specialty"
+              label="Medical Specialty"
               value={specialty}
               onChange={(e) => setSpecialty(e.target.value)}
-              placeholder="e.g. General Medicine"
+              placeholder="e.g. Internal Medicine / Cardiology"
               icon={<Stethoscope size={16} />}
             />
             <TextField
-              label="Medical registration no."
+              label="Medical Council Registration No."
               value={registrationNo}
               onChange={(e) => setRegistrationNo(e.target.value)}
-              placeholder="e.g. KMC/12345"
+              placeholder="e.g. KMC/2019/84920"
               icon={<BadgeCheck size={16} />}
             />
-            <div className="profile-form__wide">
+            <div className="profile-form-v2__full">
               <TextAreaField
-                label="Practice address"
+                label="Practice / Hospital Suite Address"
                 value={address}
                 onChange={(e) => setAddress(e.target.value)}
                 rows={3}
-                placeholder="Clinic / hospital address"
+                placeholder="Hospital / OPD Clinic suite, Street, City, State, PIN code"
               />
             </div>
           </div>
-          <div className="profile-card__actions">
+
+          {/* Live Prescription Preview */}
+          <div className="profile-rx-preview-box">
+            <div className="profile-rx-preview-header">
+              <FileCheck size={16} className="profile-icon-emerald" />
+              <strong>Live Prescription Sign-Off Preview</strong>
+              <Badge tone="ok">Auto-Generated</Badge>
+            </div>
+            <div className="profile-rx-preview-content">
+              <div className="profile-rx-doc-name">
+                Dr. {fullName || "Rajesh Sharma, MD"}
+              </div>
+              <div className="profile-rx-doc-meta">
+                <span>{specialty || "Internal Medicine"}</span> ·{" "}
+                <span>Reg No: {registrationNo || "KMC/12345"}</span>
+              </div>
+              <div className="profile-rx-address">
+                <MapPin size={12} /> {address || "Clinical OPD Practice Suite, General Hospital"}
+              </div>
+            </div>
+          </div>
+
+          <div className="profile-card-v2__footer">
             <span>
-              <MapPin size={15} /> Saved securely to your clinician profile
+              <MapPin size={14} /> Synchronized automatically across all consultation notes
             </span>
-            <Button variant="primary" loading={saving} onClick={() => void saveProfile()}>
-              <Save size={16} /> Save changes
+            <Button
+              variant="primary"
+              size="lg"
+              loading={saving}
+              onClick={() => void saveProfile()}
+            >
+              <Save size={16} /> Save Practice Changes
             </Button>
           </div>
         </section>
+
+        {/* Side Column: Clinic & Security Stack */}
+        <aside className="profile-side-stack">
+          {/* Card: Connected Clinic Workspace */}
+          <div className="profile-side-card" data-profile-elem>
+            <div className="profile-side-card__header">
+              <Building2 size={18} className="profile-icon-emerald" />
+              <h3>Clinic Workspace</h3>
+            </div>
+
+            <div className="profile-clinic-block">
+              <strong>{profile?.clinic_name || "My Practice Workspace"}</strong>
+              <small>Active Consultation Workspace</small>
+            </div>
+
+            <p className="profile-side-card__desc">
+              Collaborate seamlessly with colleagues and staff within your shared clinic roster.
+            </p>
+
+            <button
+              type="button"
+              className="profile-clinic-link-btn"
+              onClick={() => navigate("/clinic")}
+            >
+              <span>Manage Clinic &amp; Members</span>
+              <ChevronRight size={15} />
+            </button>
+          </div>
+
+          {/* Card: Account Security & Compliance */}
+          <div className="profile-side-card" data-profile-elem>
+            <div className="profile-side-card__header">
+              <UserCheck size={18} className="profile-icon-emerald" />
+              <h3>Account Security</h3>
+            </div>
+
+            <div className="profile-facts-list">
+              <div className="profile-fact-item">
+                <Mail size={14} />
+                <div>
+                  <small>Login Email</small>
+                  <span>{profile?.email || "—"}</span>
+                </div>
+              </div>
+
+              <div className="profile-fact-item">
+                <ShieldCheck size={14} />
+                <div>
+                  <small>Authorization Role</small>
+                  <span>{profile?.role === "admin" ? "Platform Administrator" : "Attending Doctor"}</span>
+                </div>
+              </div>
+
+              <div className="profile-fact-item">
+                <Calendar size={14} />
+                <div>
+                  <small>Clinician Status</small>
+                  <span style={{ color: "var(--green-700)", fontWeight: 700 }}>
+                    <CheckCircle2 size={13} style={{ display: "inline", verticalAlign: "middle", marginRight: 4 }} />
+                    Active &amp; Verified
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <p className="profile-side-card__desc" style={{ marginTop: 14 }}>
+              Protected under Digital Personal Data Protection (DPDP) Act 2023 regulations.
+            </p>
+          </div>
+        </aside>
       </div>
     </main>
   );

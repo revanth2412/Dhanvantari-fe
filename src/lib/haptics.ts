@@ -26,11 +26,13 @@ const PATTERNS: Record<HapticPattern, number | number[]> = {
   error: [28, 45, 28, 45, 28],
 };
 
-const STORAGE_KEY = "dhanvantari.haptics";
+const STORAGE_KEY = "medivaani.haptics";
+const LEGACY_STORAGE_KEY = "dhanvantari.haptics";
 
 function readPreference(): boolean {
   try {
-    return localStorage.getItem(STORAGE_KEY) !== "off";
+    const val = localStorage.getItem(STORAGE_KEY) ?? localStorage.getItem(LEGACY_STORAGE_KEY);
+    return val !== "off";
   } catch {
     return true;
   }

@@ -1,47 +1,60 @@
 /**
- * Dhanvantari Design Tokens
+ * MediVaani AI Design Tokens
+ * Obsidian dark green surfaces, luminous mint accents, warm turmeric accents.
  * One design language for the whole app. Never hardcode colors/radii/shadows
  * in component CSS — always reference these variables.
  *
- * Palette story: "evergreen & saffron" — deep herbal greens (Dhanvantari,
- * Ayurveda, healing) with a warm saffron accent, on porcelain surfaces.
+ * Palette story: "evergreen, obsidian & turmeric" — deep herbal greens,
+ * obsidian medical cockpit surfaces, luminous mint telemetry, warm saffron accents.
  */
 :root {
   /* ---- Brand color scales ---- */
-  --green-950: #06120f;
-  --green-900: #0a211b;
-  --green-800: #0d3229;
-  --green-700: #0f4a3b;
-  --green-600: #11705a;
-  --green-500: #128a6d;
-  --green-400: #22c99d;
-  --green-300: #6fe0c2;
-  --green-100: #d7f4ea;
-  --green-50: #ecfaf4;
+  --green-950: #040e0b;
+  --green-900: #071e17;
+  --green-850: #0a2920;
+  --green-800: #0d382c;
+  --green-700: #104e3e;
+  --green-600: #12725a;
+  --green-500: #159577;
+  --green-400: #20c997;
+  --green-300: #5fe0bc;
+  --green-200: #9fedd8;
+  --green-100: #d4f8ee;
+  --green-50: #ecfaf5;
 
-  --saffron-600: #c77b1d;
-  --saffron-500: #e89b2e;
-  --saffron-400: #f4b455;
-  --saffron-100: #fdf0da;
+  --saffron-700: #9a590c;
+  --saffron-600: #c47614;
+  --saffron-500: #e89524;
+  --saffron-400: #f5b14c;
+  --saffron-300: #fcd58b;
+  --saffron-100: #fef1d8;
+  --saffron-50: #fffbf2;
+
+  --cyan-500: #0ea5e9;
+  --cyan-400: #38bdf8;
+  --cyan-100: #e0f2fe;
 
   /* ---- Semantic: surfaces & text ---- */
-  --bg: #f4f7f6;
-  --bg-soft: #eef3f1;
+  --bg: #f3f6f5;
+  --bg-alt: #ebf1ef;
+  --bg-soft: #e5ece9;
   --surface: #ffffff;
-  --surface-2: #f8faf9;
-  --surface-3: #f1f5f3;
-  --ink: #10201b;
-  --ink-2: #3b4a45;
-  --muted: #64756f;
-  --faint: #93a29c;
-  --border: #e2e9e6;
-  --border-strong: #cbd6d2;
+  --surface-2: #f7faf9;
+  --surface-3: #eff4f2;
+  --surface-elevated: #ffffff;
+  --ink: #0d1e19;
+  --ink-2: #2b3d36;
+  --muted: #576d65;
+  --faint: #899c95;
+  --border: #e0e8e4;
+  --border-strong: #c8d6d0;
+  --border-subtle: rgba(16, 32, 27, 0.07);
 
   /* ---- Semantic: intent ---- */
   --primary: var(--green-600);
   --primary-strong: var(--green-700);
   --primary-soft: var(--green-50);
-  --primary-glow: rgba(18, 138, 109, 0.28);
+  --primary-glow: rgba(21, 149, 119, 0.28);
   --accent: var(--saffron-500);
   --accent-soft: var(--saffron-100);
 
@@ -49,35 +62,54 @@
   --danger-soft: #fdecea;
   --warn: #b45309;
   --warn-soft: #fef3c7;
-  --info: #2563ab;
-  --info-soft: #e3eefb;
+  --info: #0284c7;
+  --info-soft: #e0f2fe;
   --ok: var(--green-600);
   --ok-soft: var(--green-50);
 
-  /* ---- Gradients ---- */
-  --grad-brand: linear-gradient(135deg, #0f4a3b 0%, #128a6d 55%, #1fb489 100%);
-  --grad-brand-deep: linear-gradient(160deg, #06120f 0%, #0a211b 45%, #0d3a2e 100%);
-  --grad-accent: linear-gradient(135deg, #e89b2e, #f4b455);
-  --grad-text: linear-gradient(100deg, #6fe0c2, #22c99d 40%, #f4b455 95%);
-
   /* ---- Typography ---- */
-  --font-body: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  --font-display: "Sora", var(--font-body);
+  --font-body: "Plus Jakarta Sans", "Instrument Sans", -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-display: "Bricolage Grotesque", "Plus Jakarta Sans", sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, "Cascadia Code", monospace;
 
+  /* ---- Glassmorphism & Atmospheric Depth ---- */
+  --glass-dark: rgba(7, 24, 19, 0.82);
+  --glass-dark-border: rgba(95, 224, 188, 0.16);
+  --glass-dark-highlight: rgba(255, 255, 255, 0.08);
+  --glass-light: rgba(255, 255, 255, 0.85);
+  --glass-light-border: rgba(255, 255, 255, 0.7);
+  --glass-card-hover: rgba(255, 255, 255, 0.05);
+
+  /* ---- Gradients & Lights ---- */
+  --grad-brand: linear-gradient(135deg, #0d382c 0%, #159577 55%, #20c997 100%);
+  --grad-brand-deep: linear-gradient(160deg, #040e0b 0%, #071e17 35%, #0a2d23 70%, #0d3b2e 100%);
+  --grad-cockpit: linear-gradient(145deg, rgba(10, 37, 29, 0.95) 0%, rgba(4, 14, 11, 0.98) 100%);
+  --grad-accent: linear-gradient(135deg, #e89524 0%, #f5b14c 100%);
+  --grad-accent-glow: linear-gradient(135deg, rgba(232, 149, 36, 0.25), rgba(245, 177, 76, 0.05));
+  --grad-text: linear-gradient(100deg, #5fe0bc 0%, #20c997 45%, #f5b14c 100%);
+  --grad-dark-card: linear-gradient(145deg, rgba(10, 35, 28, 0.88) 0%, rgba(4, 14, 11, 0.96) 100%);
+  --grad-emerald-subtle: radial-gradient(circle at 50% 0%, rgba(32, 201, 151, 0.22), transparent 70%);
+  --grad-hero-radial: radial-gradient(circle at 80% 20%, rgba(95, 224, 188, 0.15) 0%, rgba(232, 149, 36, 0.08) 35%, transparent 70%);
+
   /* ---- Shape ---- */
+  --r-xs: 6px;
   --r-sm: 8px;
   --r-md: 12px;
   --r-lg: 16px;
   --r-xl: 22px;
+  --r-2xl: 30px;
   --r-full: 999px;
 
-  /* ---- Elevation (green-tinted, soft) ---- */
-  --shadow-1: 0 1px 2px rgba(16, 32, 27, 0.06);
-  --shadow-2: 0 1px 2px rgba(16, 32, 27, 0.05), 0 6px 18px -8px rgba(16, 32, 27, 0.12);
-  --shadow-3: 0 2px 4px rgba(16, 32, 27, 0.05), 0 16px 40px -16px rgba(16, 32, 27, 0.22);
-  --shadow-pop: 0 24px 60px -12px rgba(6, 18, 15, 0.35);
-  --ring: 0 0 0 3px rgba(18, 138, 109, 0.22);
+  /* ---- Elevation & Shadows ---- */
+  --shadow-1: 0 1px 3px rgba(10, 30, 24, 0.05), 0 1px 2px rgba(10, 30, 24, 0.03);
+  --shadow-2: 0 4px 12px -2px rgba(10, 30, 24, 0.08), 0 2px 4px -1px rgba(10, 30, 24, 0.04);
+  --shadow-3: 0 12px 32px -8px rgba(10, 30, 24, 0.12), 0 4px 12px -2px rgba(10, 30, 24, 0.06);
+  --shadow-4: 0 24px 60px -12px rgba(4, 14, 11, 0.22);
+  --shadow-glow: 0 0 45px -10px rgba(32, 201, 151, 0.35);
+  --shadow-amber-glow: 0 0 40px -10px rgba(232, 149, 36, 0.35);
+  --shadow-pop: 0 24px 60px -12px rgba(4, 14, 11, 0.35);
+  --ring: 0 0 0 3px rgba(21, 149, 119, 0.22);
+  --ring-accent: 0 0 0 3px rgba(232, 149, 36, 0.25);
 
   /* ---- Motion ---- */
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
@@ -87,9 +119,9 @@
   --dur-slow: 420ms;
 
   /* ---- Layout ---- */
-  --sidebar-w: 236px;
+  --sidebar-w: 240px;
   --sidebar-rail: 64px;
-  --topbar-h: 54px;
+  --topbar-h: 56px;
   --tabbar-h: 58px;
   /* Home-indicator / notch padding; 0 on browsers without safe areas. */
   --safe-bottom: env(safe-area-inset-bottom, 0px);

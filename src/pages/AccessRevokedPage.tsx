@@ -61,7 +61,7 @@ export function AccessRevokedPage() {
 
         <p className="muted" style={{ maxWidth: 400, margin: "0 auto" }}>
           Access for <strong>{doctor?.email}</strong> was revoked by a platform
-          administrator, so you can&rsquo;t use Dhanvantari in any clinic right now.
+          administrator, so you can&rsquo;t use MediVaani in any clinic right now.
           Contact your administrator to have it restored — this page updates automatically
           once they do.
         </p>
@@ -79,9 +79,9 @@ export function AccessRevokedPage() {
             variant="primary"
             onClick={() => {
               window.location.href = `mailto:?subject=${encodeURIComponent(
-                "Dhanvantari access request",
+                "MediVaani access request",
               )}&body=${encodeURIComponent(
-                `Hello,\n\nMy Dhanvantari account (${doctor?.email ?? ""}) has been revoked. Could you please restore my access?\n\nThank you,\n${doctor?.full_name ?? ""}`,
+                `Hello,\n\nMy MediVaani account (${doctor?.email ?? ""}) has been revoked. Could you please restore my access?\n\nThank you,\n${doctor?.full_name ?? ""}`,
               )}`;
             }}
           >

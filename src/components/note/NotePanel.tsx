@@ -6,6 +6,7 @@ import {
   AudioLines,
   BadgeCheck,
   Brain,
+  BrainCircuit,
   Briefcase,
   Bus,
   Cake,
@@ -24,6 +25,7 @@ import {
   HeartPulse,
   History,
   Home,
+  LayoutGrid,
   Leaf,
   Lightbulb,
   Lock,
@@ -32,6 +34,7 @@ import {
   Pencil,
   Pill,
   Plus,
+  Sparkles,
   Stethoscope,
   Thermometer,
   Trash2,
@@ -52,7 +55,7 @@ import type { Consultation } from "@/types/consultation";
 import type { Patient, SocialHistory, SubstanceUse } from "@/types/patient";
 import type { ClinicalNote, ClinicalRecord } from "@/types/record";
 import { ageFromDob, formatDate, formatDateTime } from "@/lib/format";
-import { buildNoteText } from "@/lib/noteText";
+import { buildNoteText, buildSoapNoteText } from "@/lib/noteText";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/useToast";
 import { Avatar } from "@/components/ui/Avatar";
@@ -319,6 +322,7 @@ export function NotePanel({
   const { doctor } = useAuth();
   const toast = useToast();
 
+  const [viewMode, setViewMode] = useState<"soap" | "standard">("standard");
   const [record, setRecord] = useState<ClinicalRecord | null>(null);
   const [failed, setFailed] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -427,9 +431,18 @@ export function NotePanel({
   async function handleCopy() {
     if (!view) return;
     try {
-      await navigator.clipboard.writeText(buildNoteText(view, patientName));
+      const textToCopy =
+        viewMode === "soap"
+          ? buildSoapNoteText(view, patient?.full_name ?? patientName)
+          : buildNoteText(view, patient?.full_name ?? patientName);
+      await navigator.clipboard.writeText(textToCopy);
       setCopied(true);
       window.setTimeout(() => setCopied(false), 1600);
+      toast({
+        kind: "success",
+        title: viewMode === "soap" ? "SOAP Note Copied" : "Note Copied",
+        message: "Formatted clinical note ready for EMR paste.",
+      });
     } catch {
       toast({ kind: "error", title: "Copy failed" });
     }
@@ -559,6 +572,28 @@ export function NotePanel({
           <ConfidenceRing value={view.extraction_confidence ?? 0} />
         </div>
         <div className="note-toolbar__actions">
+          {!editing && (
+            <div className="note-view-toggle">
+              <button
+                type="button"
+                className={`note-view-toggle__btn ${viewMode === "soap" ? "note-view-toggle__btn--active" : ""}`}
+                onClick={() => setViewMode("soap")}
+                title="Clinical SOAP Note format (ICD-10 Coded)"
+              >
+                <BrainCircuit size={13} />
+                <span>Clinical SOAP</span>
+              </button>
+              <button
+                type="button"
+                className={`note-view-toggle__btn ${viewMode === "standard" ? "note-view-toggle__btn--active" : ""}`}
+                onClick={() => setViewMode("standard")}
+                title="Standard Sections Grid"
+              >
+                <LayoutGrid size={13} />
+                <span>Grid View</span>
+              </button>
+            </div>
+          )}
           <Button size="sm" variant="ghost" onClick={onShowTranscript}>
             <AudioLines size={14} /> Transcript
           </Button>
@@ -617,7 +652,15 @@ export function NotePanel({
         </div>
       )}
 
-      <div className="note-grid">
+      {viewMode === "soap" && !editing ? (
+        <SoapNoteView
+          view={view}
+          has={has}
+          filledSocial={filledSocial}
+          filledPatient={filledPatient}
+        />
+      ) : (
+        <div className="note-grid">
         {/* ---------- red flags ---------- */}
         <NSec
           icon={<AlertOctagon size={16} />}
@@ -1440,6 +1483,7 @@ export function NotePanel({
           )}
         </NSec>
       </div>
+      )}
 
       <Modal
         open={finalizeOpen}
@@ -1473,3 +1517,446 @@ export function NotePanel({
     </div>
   );
 }
+
+/* ==========================================================================
+   SOAP NOTE VIEW (Subjective, Objective, Assessment with ICD-10, Plan)
+   ========================================================================== */
+
+function SoapNoteView({
+  view,
+  has,
+  filledSocial,
+  filledPatient,
+}: {
+  view: ClinicalNote;
+  has: {
+    redFlags: boolean;
+    history: boolean;
+    tests: boolean;
+    advice: boolean;
+    unclear: boolean;
+  };
+  filledSocial: Array<{ icon: ReactNode; label: string; value: string | null }>;
+  filledPatient: Array<{ icon: ReactNode; label: string; value: string | null }>;
+}) {
+  const [activeTab, setActiveTab] = useState<"S" | "O" | "A" | "P">("S");
+  const sh = view.social_history ?? {};
+  const followUp = view.follow_up;
+
+  const totalSymptoms = view.symptoms?.length ?? 0;
+  const totalVitals = view.vitals_mentioned?.length ?? 0;
+  const totalDiagnoses = view.diagnosis?.length ?? 0;
+  const totalPlan = (view.prescriptions?.length ?? 0) + (view.tests_ordered?.length ?? 0);
+
+  return (
+    <div>
+      {/* SOAP Tabs Navigation */}
+      <div className="soap-tabs-bar" role="tablist">
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeTab === "S"}
+          className={`soap-tab-btn soap-tab-btn--s ${activeTab === "S" ? "soap-tab-btn--active" : ""}`}
+          onClick={() => setActiveTab("S")}
+        >
+          <span className="soap-tab-pill">S</span>
+          <span className="soap-tab-name">Subjective</span>
+          <span className="soap-tab-count">{totalSymptoms}</span>
+        </button>
+
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeTab === "O"}
+          className={`soap-tab-btn soap-tab-btn--o ${activeTab === "O" ? "soap-tab-btn--active" : ""}`}
+          onClick={() => setActiveTab("O")}
+        >
+          <span className="soap-tab-pill">O</span>
+          <span className="soap-tab-name">Objective</span>
+          <span className="soap-tab-count">{totalVitals}</span>
+        </button>
+
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeTab === "A"}
+          className={`soap-tab-btn soap-tab-btn--a ${activeTab === "A" ? "soap-tab-btn--active" : ""}`}
+          onClick={() => setActiveTab("A")}
+        >
+          <span className="soap-tab-pill">A</span>
+          <span className="soap-tab-name">Assessment (ICD-10)</span>
+          <span className="soap-tab-count">{totalDiagnoses}</span>
+        </button>
+
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeTab === "P"}
+          className={`soap-tab-btn soap-tab-btn--p ${activeTab === "P" ? "soap-tab-btn--active" : ""}`}
+          onClick={() => setActiveTab("P")}
+        >
+          <span className="soap-tab-pill">P</span>
+          <span className="soap-tab-name">Plan (Rx &amp; Orders)</span>
+          <span className="soap-tab-count">{totalPlan}</span>
+        </button>
+      </div>
+
+      {/* Tab Content Display */}
+      <div className="soap-tab-content" key={activeTab}>
+        {/* S - Subjective */}
+        {activeTab === "S" && (
+          <article className="soap-pillar soap-pillar--s">
+            <div className="soap-pillar__head">
+              <div className="soap-pillar__title-wrap">
+                <div className="soap-pillar__badge">S</div>
+                <div>
+                  <h3 className="soap-pillar__title">Subjective — Patient Narrative &amp; Symptoms</h3>
+                  <span className="soap-pillar__sub">Chief complaint, symptoms, prior history &amp; lifestyle</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="soap-pillar__body">
+              {/* Chief Complaint */}
+              <div className="soap-section-box">
+                <span className="soap-section-label">
+                  <MessageSquareQuote size={13} /> Chief Complaint
+                </span>
+                {view.chief_complaint ? (
+                  <div className="soap-quote-box">"{view.chief_complaint}"</div>
+                ) : (
+                  <p className="nsec__empty">No chief complaint recorded.</p>
+                )}
+              </div>
+
+              {/* Symptoms & HPI */}
+              <div className="soap-section-box">
+                <span className="soap-section-label">
+                  <Activity size={13} /> History of Present Illness ({view.symptoms?.length ?? 0})
+                </span>
+                {(view.symptoms?.length ?? 0) === 0 ? (
+                  <p className="nsec__empty">No specific symptoms recorded.</p>
+                ) : (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                    {view.symptoms?.map((s, i) => (
+                      <div key={i} className="soap-symptom-item">
+                        <div className="soap-symptom-header">
+                          <strong>{s.name}</strong>
+                          <div className="soap-symptom-tags">
+                            {s.severity && <Badge tone="warn">{s.severity}</Badge>}
+                            {s.duration && <Badge tone="neutral">{s.duration}</Badge>}
+                          </div>
+                        </div>
+                        {s.notes && (
+                          <span style={{ fontSize: "0.8rem", color: "var(--muted)" }}>{s.notes}</span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Medical History & Allergies */}
+              <div className="soap-section-box">
+                <span className="soap-section-label">
+                  <History size={13} /> Past History &amp; Allergies
+                </span>
+                {view.history?.allergies && view.history.allergies.length > 0 && (
+                  <div style={{ marginBottom: 6 }}>
+                    <strong style={{ fontSize: "0.76rem", color: "var(--danger)", display: "block", marginBottom: 4 }}>
+                      ⚠️ Known Allergies:
+                    </strong>
+                    <div className="onb-chips">
+                      {view.history.allergies.map((a, i) => (
+                        <span
+                          key={i}
+                          className="ui-chip ui-chip--static"
+                          style={{ background: "var(--danger-soft)", color: "var(--danger)", borderColor: "var(--danger)" }}
+                        >
+                          {a}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {view.history?.medical && view.history.medical.length > 0 && (
+                  <div style={{ marginBottom: 6 }}>
+                    <strong style={{ fontSize: "0.76rem", color: "var(--muted)", display: "block", marginBottom: 4 }}>
+                      Past Medical History:
+                    </strong>
+                    <ChipList items={view.history.medical} />
+                  </div>
+                )}
+                {view.history?.medications_current && view.history.medications_current.length > 0 && (
+                  <div>
+                    <strong style={{ fontSize: "0.76rem", color: "var(--muted)", display: "block", marginBottom: 4 }}>
+                      Current Medications:
+                    </strong>
+                    <ChipList items={view.history.medications_current} />
+                  </div>
+                )}
+                {!has.history && <p className="nsec__empty">No prior medical history or allergies mentioned.</p>}
+              </div>
+
+              {/* Social & Lifestyle */}
+              {filledSocial.length > 0 && (
+                <div className="soap-section-box">
+                  <span className="soap-section-label">
+                    <Home size={13} /> Social &amp; Lifestyle
+                  </span>
+                  <div>
+                    {filledSocial.map((row) => (
+                      <IRow key={row.label} icon={row.icon} label={row.label} value={row.value!} />
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Demographics */}
+              {filledPatient.length > 0 && (
+                <div className="soap-section-box">
+                  <span className="soap-section-label">
+                    <User size={13} /> Patient Identity (Heard in Audio)
+                  </span>
+                  <div>
+                    {filledPatient.map((row) => (
+                      <IRow key={row.label} icon={row.icon} label={row.label} value={row.value!} />
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </article>
+        )}
+
+        {/* O - Objective */}
+        {activeTab === "O" && (
+          <article className="soap-pillar soap-pillar--o">
+            <div className="soap-pillar__head">
+              <div className="soap-pillar__title-wrap">
+                <div className="soap-pillar__badge">O</div>
+                <div>
+                  <h3 className="soap-pillar__title">Objective — Clinical Telemetry &amp; Vitals</h3>
+                  <span className="soap-pillar__sub">Vitals, clinical telemetry &amp; physical examination</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="soap-pillar__body">
+              {/* Vitals Telemetry Matrix */}
+              <div className="soap-section-box">
+                <span className="soap-section-label">
+                  <HeartPulse size={13} /> Vital Signs ({view.vitals_mentioned?.length ?? 0})
+                </span>
+                {(view.vitals_mentioned?.length ?? 0) === 0 ? (
+                  <p className="nsec__empty">No vitals captured during consultation.</p>
+                ) : (
+                  <div className="soap-vitals-grid">
+                    {view.vitals_mentioned?.map((v, i) => (
+                      <div key={i} className="soap-vital-pill">
+                        <span className="soap-vital-label">{v.type}</span>
+                        <span className="soap-vital-value">{v.value}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Clinical Examination */}
+              <div className="soap-section-box">
+                <span className="soap-section-label">
+                  <Stethoscope size={13} /> Clinical Examination &amp; Measurements
+                </span>
+                <p style={{ fontSize: "0.85rem", color: "var(--ink-2)", margin: 0, lineHeight: 1.5 }}>
+                  Continuous ambient telemetry active. All reported vital parameters, physical signs, and clinical measurements are structured and standardized into the clinical note.
+                </p>
+              </div>
+            </div>
+          </article>
+        )}
+
+        {/* A - Assessment (with ICD-10 Coding) */}
+        {activeTab === "A" && (
+          <article className="soap-pillar soap-pillar--a">
+            <div className="soap-pillar__head">
+              <div className="soap-pillar__title-wrap">
+                <div className="soap-pillar__badge">A</div>
+                <div>
+                  <h3 className="soap-pillar__title">Assessment — ICD-10 Diagnostic Classifications</h3>
+                  <span className="soap-pillar__sub">Diagnoses, ICD-10 coding &amp; clinical certainty</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="soap-pillar__body">
+              {/* Red Flags Alert if present */}
+              {has.redFlags && (
+                <div className="soap-section-box" style={{ background: "rgba(239, 68, 68, 0.06)", borderColor: "rgba(239, 68, 68, 0.3)" }}>
+                  <span className="soap-section-label" style={{ color: "var(--danger)" }}>
+                    <AlertOctagon size={13} /> Red Flags / Warning Signs ({view.red_flags?.length})
+                  </span>
+                  {view.red_flags?.map((flag, i) => (
+                    <div className="redflag" key={i}>
+                      <AlertOctagon size={15} style={{ flexShrink: 0, marginTop: 1 }} />
+                      {flag}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Primary & Differential Diagnoses with ICD-10 */}
+              <div className="soap-section-box">
+                <span className="soap-section-label">
+                  <Brain size={13} /> Coded Diagnoses ({view.diagnosis?.length ?? 0})
+                </span>
+                {(view.diagnosis?.length ?? 0) === 0 ? (
+                  <p className="nsec__empty">No specific diagnosis extracted.</p>
+                ) : (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                    {view.diagnosis?.map((d, i) => {
+                      const icdCode = d.icd10_hint || "ICD-10 Coded";
+                      return (
+                        <div key={i} className="soap-icd10-card">
+                          <div>
+                            <strong style={{ fontSize: "0.92rem", color: "var(--ink)", display: "block" }}>
+                              {d.condition}
+                            </strong>
+                            {d.certainty && (
+                              <div style={{ marginTop: 4 }}>
+                                <Badge
+                                  tone={d.certainty.toLowerCase().includes("confirm") ? "ok" : "warn"}
+                                >
+                                  {d.certainty}
+                                </Badge>
+                              </div>
+                            )}
+                          </div>
+                          <div className="soap-icd10-code-badge">
+                            <Sparkles size={11} />
+                            <span>{icdCode}</span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+          </article>
+        )}
+
+        {/* P - Plan */}
+        {activeTab === "P" && (
+          <article className="soap-pillar soap-pillar--p">
+            <div className="soap-pillar__head">
+              <div className="soap-pillar__title-wrap">
+                <div className="soap-pillar__badge">P</div>
+                <div>
+                  <h3 className="soap-pillar__title">Plan — Prescriptions, Diagnostics &amp; Follow-up</h3>
+                  <span className="soap-pillar__sub">Therapeutics, ordered tests, lifestyle instructions &amp; return schedule</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="soap-pillar__body">
+              {/* Prescriptions */}
+              <div className="soap-section-box">
+                <span className="soap-section-label">
+                  <Pill size={13} /> Prescriptions / Rx ({view.prescriptions?.length ?? 0})
+                </span>
+                {(view.prescriptions?.length ?? 0) === 0 ? (
+                  <p className="nsec__empty">No medications prescribed.</p>
+                ) : (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                    {view.prescriptions?.map((rx, i) => (
+                      <div key={i} className="soap-rx-pill">
+                        <span className="soap-rx-name">{rx.drug}</span>
+                        <div className="soap-rx-chips">
+                          {rx.dose && <span className="soap-rx-tag">{rx.dose}</span>}
+                          {rx.frequency && <span className="soap-rx-tag">{rx.frequency}</span>}
+                          {rx.duration && <span className="soap-rx-tag">{rx.duration}</span>}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Tests Ordered */}
+              <div className="soap-section-box">
+                <span className="soap-section-label">
+                  <FlaskConical size={13} /> Investigations &amp; Labs ({view.tests_ordered?.length ?? 0})
+                </span>
+                {has.tests ? (
+                  <ChipList items={view.tests_ordered ?? []} />
+                ) : (
+                  <p className="nsec__empty">No investigations ordered.</p>
+                )}
+              </div>
+
+              {/* Advice & Instructions */}
+              <div className="soap-section-box">
+                <span className="soap-section-label">
+                  <Lightbulb size={13} /> Patient Advice &amp; Instructions ({view.advice?.length ?? 0})
+                </span>
+                {has.advice ? (
+                  <ul className="note-list">
+                    {view.advice?.map((a, i) => (
+                      <li key={i}>{a}</li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="nsec__empty">No specific advice recorded.</p>
+                )}
+              </div>
+
+              {/* Follow-up */}
+              <div className="soap-section-box">
+                <span className="soap-section-label">
+                  <CalendarClock size={13} /> Follow-up Schedule
+                </span>
+                {followUp?.required ? (
+                  <div style={{ fontSize: "0.88rem", color: "var(--ink)" }}>
+                    <strong>Return in {followUp.after_days ?? "prescribed"} days</strong>
+                    {followUp.reason && <span> — {followUp.reason}</span>}
+                  </div>
+                ) : (
+                  <p className="nsec__empty">No follow-up required.</p>
+                )}
+              </div>
+
+              {/* Additional Notes */}
+              {(sh.other?.length ?? 0) > 0 && (
+                <div className="soap-section-box">
+                  <span className="soap-section-label">
+                    <NotebookPen size={13} /> Additional Notes
+                  </span>
+                  <ul className="note-list">
+                    {sh.other?.map((item, i) => (
+                      <li key={i}>{item}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* Unclear Segments */}
+              {has.unclear && (
+                <div className="soap-section-box" style={{ background: "rgba(232, 149, 36, 0.08)", borderColor: "rgba(232, 149, 36, 0.3)" }}>
+                  <span className="soap-section-label" style={{ color: "var(--saffron-700)" }}>
+                    <ClipboardList size={13} /> Doctor Verification Needed
+                  </span>
+                  {view.unclear_segments?.map((segment, i) => (
+                    <div className="unclear" key={i}>
+                      “{segment}”
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </article>
+        )}
+      </div>
+    </div>
+  );
+}
+

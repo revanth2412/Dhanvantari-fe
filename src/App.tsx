@@ -8,6 +8,7 @@ import { LoginPage } from "@/pages/LoginPage";
 import { RegisterProfilePage } from "@/pages/RegisterProfilePage";
 import { AccessRevokedPage } from "@/pages/AccessRevokedPage";
 import { SelectClinicPage } from "@/pages/SelectClinicPage";
+import { LandingPage } from "@/pages/LandingPage";
 
 // Approved-area pages are code-split — auth screens load instantly, the
 // workspace loads on demand.
@@ -93,6 +94,7 @@ export default function App() {
   return (
     <Suspense fallback={<FullScreenLoader />}>
       <Routes>
+        <Route path="/landing" element={<LandingPage />} />
         <Route
           path="/login"
           element={
@@ -136,7 +138,7 @@ export default function App() {
         <Route
           path="/"
           element={
-            <RouteFor allow={["approved"]} status={status} element={<AppLayout />} />
+            status === "unauthenticated" ? <LandingPage /> : <RouteFor allow={["approved"]} status={status} element={<AppLayout />} />
           }
         >
           <Route index element={<WorkspaceHome />} />

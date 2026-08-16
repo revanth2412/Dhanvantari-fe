@@ -126,3 +126,111 @@ export function buildNoteText(note: ClinicalNote, patientName?: string | null): 
 
   return lines.join("\n").trim();
 }
+
+/** Builds a structured ICD-10 coded SOAP (Subjective, Objective, Assessment, Plan) plain-text note. */
+export function buildSoapNoteText(note: ClinicalNote, patientName?: string | null): string {
+  const lines: string[] = [];
+  const push = (s = "") => lines.push(s);
+
+  push("CLINICAL SOAP NOTE (ICD-10 CODED)");
+  if (patientName) push(`Patient: ${patientName}`);
+  const p = note.patient;
+  if (p && (p.age || p.gender)) {
+    push(`Demographics: ${[p.age, p.gender].filter(Boolean).join(", ")}`);
+  }
+  push();
+
+  // S - Subjective
+  push("S — SUBJECTIVE");
+  push("--------------");
+  if (note.chief_complaint) {
+    push(`Chief Complaint: ${note.chief_complaint}`);
+  }
+  if (note.symptoms?.length) {
+    push("History of Present Illness:");
+    for (const s of note.symptoms) {
+      const extra = [s.duration ? `Duration: ${s.duration}` : null, s.severity ? `Severity: ${s.severity}` : null, s.notes].filter(Boolean).join(" · ");
+      push(`  • ${s.name}${extra ? ` (${extra})` : ""}`);
+    }
+  }
+  const h = note.history;
+  if (h && (h.medical?.length || h.medications_current?.length || h.allergies?.length)) {
+    if (h.medical?.length) push(`Past Medical History: ${h.medical.join(", ")}`);
+    if (h.medications_current?.length) push(`Current Medications: ${h.medications_current.join(", ")}`);
+    if (h.allergies?.length) push(`Allergies: ${h.allergies.join(", ")}`);
+  }
+  const sh = note.social_history;
+  if (sh) {
+    const substance = (s?: { status?: string | null; detail?: string | null }) =>
+      s?.status || s?.detail ? [s.status, s.detail].filter(Boolean).join(" — ") : null;
+    const soc = [
+      sh.occupation ? `Occupation: ${sh.occupation}` : null,
+      sh.residence ? `Residence: ${sh.residence}` : null,
+      sh.smoking ? `Smoking: ${substance(sh.smoking)}` : null,
+      sh.alcohol ? `Alcohol: ${substance(sh.alcohol)}` : null,
+      sh.exercise ? `Exercise: ${sh.exercise}` : null,
+      sh.diet ? `Diet: ${sh.diet}` : null,
+    ].filter(Boolean);
+    if (soc.length) push(`Social History: ${soc.join(" | ")}`);
+  }
+  push();
+
+  // O - Objective
+  push("O — OBJECTIVE");
+  push("-------------");
+  if (note.vitals_mentioned?.length) {
+    push("Vital Signs & Telemetry:");
+    for (const v of note.vitals_mentioned) {
+      push(`  • ${v.type}: ${v.value}`);
+    }
+  } else {
+    push("Vitals: Routine clinical examination");
+  }
+  push();
+
+  // A - Assessment
+  push("A — ASSESSMENT (ICD-10)");
+  push("-----------------------");
+  if (note.diagnosis?.length) {
+    note.diagnosis.forEach((d, i) => {
+      const code = d.icd10_hint ? ` [ICD-10: ${d.icd10_hint}]` : "";
+      const cert = d.certainty ? ` (${d.certainty})` : "";
+      push(`  ${i + 1}. ${d.condition}${code}${cert}`);
+    });
+  }
+  if (note.red_flags?.length) {
+    push("Red Flags / Alerts:");
+    for (const r of note.red_flags) push(`  ! ${r}`);
+  }
+  push();
+
+  // P - Plan
+  push("P — PLAN");
+  push("--------");
+  if (note.prescriptions?.length) {
+    push("Prescriptions (Rx):");
+    note.prescriptions.forEach((rx, i) => {
+      const extra = [rx.dose, rx.frequency, rx.duration].filter(Boolean).join(" · ");
+      push(`  ${i + 1}. ${rx.drug}${extra ? ` — ${extra}` : ""}`);
+    });
+  }
+  if (note.tests_ordered?.length) {
+    push("Diagnostic Tests Ordered:");
+    for (const t of note.tests_ordered) push(`  • ${t}`);
+  }
+  if (note.advice?.length) {
+    push("Patient Advice & Lifestyle Recommendations:");
+    for (const a of note.advice) push(`  • ${a}`);
+  }
+  const f = note.follow_up;
+  if (f?.required) {
+    push(`Follow-up: After ${f.after_days ?? "prescribed"} days${f.reason ? ` — ${f.reason}` : ""}`);
+  }
+  if (note.unclear_segments?.length) {
+    push("Ambiguities / Doctor Review:");
+    for (const u of note.unclear_segments) push(`  ? ${u}`);
+  }
+  push();
+
+  return lines.join("\n").trim();
+}

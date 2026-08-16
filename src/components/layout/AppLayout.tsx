@@ -1,16 +1,17 @@
 import { Suspense, type SyntheticEvent } from "react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import {
-  Activity,
   Building2,
   LayoutDashboard,
   LogOut,
   Mic,
+  Settings,
   ShieldCheck,
   Users,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { Avatar } from "@/components/ui/Avatar";
+import { BrandMark } from "@/components/ui/BrandMark";
 import { Button } from "@/components/ui/Button";
 import { EcgLoader } from "@/components/ui/EcgLoader";
 import { MobileTabBar } from "@/components/layout/MobileTabBar";
@@ -18,8 +19,13 @@ import { ClinicGate } from "@/components/clinic/ClinicGate";
 
 /** The sidebar expands on hover AND :focus-within; a clicked link keeps focus,
  * which would pin it open after the pointer leaves — so blur on click. */
-function releaseFocus(e: SyntheticEvent<HTMLElement>) {
-  e.currentTarget.blur();
+function releaseFocus(e?: SyntheticEvent<HTMLElement>) {
+  if (e) {
+    e.currentTarget.blur();
+  }
+  if (document.activeElement instanceof HTMLElement) {
+    document.activeElement.blur();
+  }
 }
 
 /** Approved-area shell: auto-collapsing evergreen sidebar + routed page.
@@ -34,25 +40,26 @@ export function AppLayout() {
 
   return (
     <div className="shell">
-      <aside className="shell__sidebar">
+      <aside className="shell__sidebar" aria-label="Main Navigation">
         <div className="side-brand">
-          <Activity size={22} color="#22c99d" />
-          <span className="side-label">
-            Dhanvantari
-            <small>AI Clinical Scribe</small>
+          <BrandMark size={32} className="side-brand__icon" />
+          <span className="side-brand__name side-label">
+            MediVaani<b>AI</b>
           </span>
         </div>
 
-        <div className="side-cta">
+        <div className="side-rec">
           <Button
             variant="primary"
-            block
+            size="md"
+            className="side-rec__btn"
+            title="Start Consultation"
             onClick={(e) => {
               releaseFocus(e);
               navigate("/consultations/new");
             }}
           >
-            <Mic size={16} /> <span className="side-label">New consultation</span>
+            <Mic size={18} /> <span className="side-label">Consultation</span>
           </Button>
         </div>
 
@@ -101,11 +108,15 @@ export function AppLayout() {
           className="side-user side-user--profile"
           role="button"
           tabIndex={0}
-          title="Open profile settings"
-          onClick={() => navigate("/profile")}
+          title="Open doctor profile settings"
+          onClick={(e) => {
+            releaseFocus(e);
+            navigate("/profile");
+          }}
           onKeyDown={(e) => {
             if (e.key === "Enter" || e.key === " ") {
               e.preventDefault();
+              releaseFocus();
               navigate("/profile");
             }
           }}
@@ -117,17 +128,32 @@ export function AppLayout() {
               {doctor?.specialty ?? (isAdmin ? "Administrator" : "Doctor")}
             </div>
           </div>
-          <button
-            type="button"
-            className="side-user__out side-label"
-            title="Sign out"
-            onClick={(e) => {
-              e.stopPropagation();
-              void signOut();
-            }}
-          >
-            <LogOut size={16} />
-          </button>
+          <div className="side-user__actions side-label">
+            <button
+              type="button"
+              className="side-user__out"
+              title="Doctor Settings"
+              onClick={(e) => {
+                e.stopPropagation();
+                releaseFocus(e);
+                navigate("/profile");
+              }}
+            >
+              <Settings size={16} />
+            </button>
+            <button
+              type="button"
+              className="side-user__out side-user__out--logout"
+              title="Sign out"
+              onClick={(e) => {
+                e.stopPropagation();
+                releaseFocus(e);
+                void signOut();
+              }}
+            >
+              <LogOut size={16} />
+            </button>
+          </div>
         </div>
       </aside>
 

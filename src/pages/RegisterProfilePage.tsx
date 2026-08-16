@@ -216,7 +216,7 @@ export function RegisterProfilePage() {
               >
                 <KeyRound size={18} />
                 <span>Join with a code</span>
-                <small>My colleagues already use Dhanvantari</small>
+                <small>My colleagues already use MediVaani</small>
               </button>
             </div>
 

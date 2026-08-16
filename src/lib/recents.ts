@@ -19,12 +19,16 @@ export interface RecentSession {
 const LIMIT = 12;
 
 function keyFor(doctorId: string): string {
+  return `medivaani.recents.${doctorId}`;
+}
+
+function legacyKeyFor(doctorId: string): string {
   return `dhanvantari.recents.${doctorId}`;
 }
 
 export function getRecentSessions(doctorId: string): RecentSession[] {
   try {
-    const raw = localStorage.getItem(keyFor(doctorId));
+    const raw = localStorage.getItem(keyFor(doctorId)) || localStorage.getItem(legacyKeyFor(doctorId));
     if (!raw) return [];
     const parsed: unknown = JSON.parse(raw);
     return Array.isArray(parsed) ? (parsed as RecentSession[]) : [];
