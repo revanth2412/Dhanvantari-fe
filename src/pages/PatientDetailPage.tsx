@@ -2,10 +2,18 @@ import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, FileText, HeartPulse, Mic, Pencil, PhoneOff } from "lucide-react";
 import { getPatient } from "@/services/patientService";
+import { listConsultations } from "@/services/consultationService";
 import { getPatientRecords } from "@/services/recordService";
 import type { Patient, SocialHistory } from "@/types/patient";
 import type { ClinicalRecord } from "@/types/record";
-import { ageFromDob, formatDate, formatDateTime } from "@/lib/format";
+import type { ConsultationListItem } from "@/types/consultation";
+import type { Page } from "@/lib/apiClient";
+import {
+  ageFromDob,
+  consultationStatusMeta,
+  formatDate,
+  formatDateTime,
+} from "@/lib/format";
 import { Avatar } from "@/components/ui/Avatar";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -41,7 +49,7 @@ function lifestyleEntries(sh: SocialHistory | undefined): Array<[string, string]
 }
 
 /** Latest record per consultation (the API returns every version). */
-function latestPerConsultation(records: ClinicalRecord[]): ClinicalRecord[] {
+function latestPerConsultation(records: ClinicalRecord[]): Map<string, ClinicalRecord> {
   const byConsultation = new Map<string, ClinicalRecord>();
   for (const record of records) {
     const existing = byConsultation.get(record.consultation_id);
@@ -49,9 +57,7 @@ function latestPerConsultation(records: ClinicalRecord[]): ClinicalRecord[] {
       byConsultation.set(record.consultation_id, record);
     }
   }
-  return [...byConsultation.values()].sort(
-    (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
-  );
+  return byConsultation;
 }
 
 export function PatientDetailPage() {
@@ -70,14 +76,24 @@ export function PatientDetailPage() {
     () => getPatientRecords(patientId!),
     { enabled: Boolean(patientId) },
   );
+  /* The visit list comes from the consultations endpoint, not the records:
+     a consultation that failed or is still processing has no note yet, and
+     leaving it out would quietly hide a visit that did happen. */
+  const visitsQuery = useCachedQuery<Page<ConsultationListItem>>(
+    `patient:${patientId}:consultations`,
+    () => listConsultations({ patient_id: patientId!, limit: 100 }),
+    { enabled: Boolean(patientId) },
+  );
 
   const patient = patientQuery.data ?? null;
-  const records = recordsQuery.loading ? null : (recordsQuery.data ?? []);
   const revealRef = useReveal<HTMLDivElement>("[data-reveal]", [patient?.id]);
 
   const age = ageFromDob(patient?.dob);
   const lifestyle = lifestyleEntries(patient?.social_history);
-  const history = records ? latestPerConsultation(records) : null;
+  const noteFor = latestPerConsultation(recordsQuery.data ?? []);
+  const history = visitsQuery.loading
+    ? null
+    : (visitsQuery.data?.items ?? []).filter((c) => c.status !== "discarded");
 
   return (
     <main className="page" ref={revealRef}>
@@ -199,42 +215,53 @@ export function PatientDetailPage() {
               />
             ) : (
               <div className="timeline">
-                {history.map((record) => (
-                  <div className="timeline-item" key={record.id}>
-                    <div
-                      className="ui-card ui-card--pad ui-card--hover"
-                      style={{ cursor: "pointer", padding: 16 }}
-                      onClick={() => navigate(`/consultations/${record.consultation_id}`)}
-                    >
+                {history.map((visit) => {
+                  const note = noteFor.get(visit.id);
+                  const meta = consultationStatusMeta[visit.status];
+                  const diagnoses = note?.data.diagnosis ?? [];
+                  return (
+                    <div className="timeline-item" key={visit.id}>
                       <div
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 10,
-                          flexWrap: "wrap",
-                        }}
+                        className="ui-card ui-card--pad ui-card--hover"
+                        style={{ cursor: "pointer", padding: 16 }}
+                        onClick={() => navigate(`/consultations/${visit.id}`)}
                       >
-                        <FileText size={16} style={{ color: "var(--primary)" }} />
-                        <strong style={{ flex: 1, fontSize: "0.93rem" }}>
-                          {record.data.chief_complaint ?? "Consultation note"}
-                        </strong>
-                        <Badge tone={record.status === "final" ? "ok" : "warn"}>
-                          {record.status === "final" ? "Final" : "Draft"} · v
-                          {record.version}
-                        </Badge>
-                      </div>
-                      <div className="muted" style={{ fontSize: "0.8rem", marginTop: 6 }}>
-                        {formatDateTime(record.created_at)}
-                        {record.data.diagnosis && record.data.diagnosis.length > 0 && (
-                          <>
-                            {" "}
-                            · {record.data.diagnosis.map((d) => d.condition).join(", ")}
-                          </>
-                        )}
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 10,
+                            flexWrap: "wrap",
+                          }}
+                        >
+                          <FileText size={16} style={{ color: "var(--primary)" }} />
+                          <strong style={{ flex: 1, fontSize: "0.93rem" }}>
+                            {note?.data.chief_complaint ?? "Consultation"}
+                          </strong>
+                          {note && (
+                            <Badge tone={note.status === "final" ? "ok" : "warn"}>
+                              {note.status === "final" ? "Final" : "Draft"} · v
+                              {note.version}
+                            </Badge>
+                          )}
+                          <Badge tone={meta.tone} dot>
+                            {meta.label}
+                          </Badge>
+                        </div>
+                        <div
+                          className="muted"
+                          style={{ fontSize: "0.8rem", marginTop: 6 }}
+                        >
+                          {formatDateTime(visit.created_at)}
+                          {visit.doctor_name && <> · {visit.doctor_name}</>}
+                          {diagnoses.length > 0 && (
+                            <> · {diagnoses.map((d) => d.condition).join(", ")}</>
+                          )}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>

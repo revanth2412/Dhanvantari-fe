@@ -14,6 +14,8 @@ export interface DoctorStats {
   patients_seen: number;
   consultations_last_7_days: number;
   consultations_last_30_days: number;
+  /** Measured audio captured across this doctor's consultations. */
+  recorded_seconds: number;
 }
 
 /** Row shape for `GET /admin/doctors` — adds a quick consultation count. */

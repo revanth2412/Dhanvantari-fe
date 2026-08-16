@@ -30,6 +30,8 @@ export interface Patient {
   do_not_call: boolean;
   /** Clinic that owns this patient — the backend scopes every read to it. */
   clinic_id: string | null;
+  /** Doctor who registered them; `GET /patients?mine=true` filters on this. */
+  created_by_id: string | null;
   social_history: SocialHistory;
   created_at: string;
 }

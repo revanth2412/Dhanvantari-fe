@@ -72,7 +72,12 @@ export interface ClinicalRecord {
   version: number;
   status: RecordStatus;
   confidence: number | null;
+  /* Signatures are server-derived from the authenticated doctor — a client
+     can't set who reviewed or signed a clinical record. */
   reviewed_by: string | null;
+  reviewed_by_id: string | null;
+  finalized_by: string | null;
+  finalized_by_id: string | null;
   finalized_at: string | null;
   created_at: string;
 }
@@ -80,5 +85,4 @@ export interface ClinicalRecord {
 /** Payload for `PUT /records/{id}` — creates a new version. */
 export interface RecordUpdateInput {
   data: ClinicalNote;
-  reviewed_by?: string | null;
 }

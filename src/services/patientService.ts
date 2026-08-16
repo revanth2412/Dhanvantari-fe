@@ -1,10 +1,39 @@
-import { apiRequest } from "@/lib/apiClient";
+import { apiList, apiRequest, queryString, type Page } from "@/lib/apiClient";
 import type { Patient, PatientCreateInput, PatientUpdateInput } from "@/types/patient";
 
-/** Search patients by name/phone (backend caps at 50). Empty search = latest. */
-export function searchPatients(search = "", signal?: AbortSignal): Promise<Patient[]> {
-  const qs = search.trim() ? `?search=${encodeURIComponent(search.trim())}` : "";
-  return apiRequest<Patient[]>(`/patients${qs}`, { signal });
+export interface PatientFilters {
+  search?: string;
+  /**
+   * Narrow to patients this doctor registered. Matters only for a clinic
+   * admin, whose scope is otherwise the whole clinic.
+   */
+  mine?: boolean;
+  /** 1–200, backend default 50. */
+  limit?: number;
+  offset?: number;
+}
+
+/** `GET /patients` — a page of patients in scope, plus the total match count. */
+export function listPatients(
+  filters: PatientFilters = {},
+  signal?: AbortSignal,
+): Promise<Page<Patient>> {
+  const qs = queryString({
+    search: filters.search?.trim(),
+    mine: filters.mine ? true : undefined,
+    limit: filters.limit,
+    offset: filters.offset,
+  });
+  return apiList<Patient>(`/patients${qs}`, { signal });
+}
+
+/** Convenience wrapper for callers that only need the rows. */
+export async function searchPatients(
+  search = "",
+  signal?: AbortSignal,
+): Promise<Patient[]> {
+  const { items } = await listPatients({ search }, signal);
+  return items;
 }
 
 export function getPatient(patientId: string): Promise<Patient> {

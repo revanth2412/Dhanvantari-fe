@@ -7,11 +7,9 @@ import {
   reprocessConsultation,
 } from "@/services/consultationService";
 import { getPatient } from "@/services/patientService";
-import { rememberSession } from "@/lib/recents";
 import { ageFromDob, consultationStatusMeta } from "@/lib/format";
 import type { Consultation, ConsultationStatus } from "@/types/consultation";
 import type { Patient } from "@/types/patient";
-import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/useToast";
 import { Avatar } from "@/components/ui/Avatar";
 import { Badge } from "@/components/ui/Badge";
@@ -34,7 +32,6 @@ const PIPELINE_ACTIVE: ConsultationStatus[] = ["uploaded", "transcribing", "extr
 export function ConsultationSessionPage() {
   const { consultationId } = useParams<{ consultationId: string }>();
   const navigate = useNavigate();
-  const { doctor } = useAuth();
   const toast = useToast();
 
   const [consultation, setConsultation] = useState<Consultation | null>(null);
@@ -46,20 +43,11 @@ export function ConsultationSessionPage() {
   const [discarding, setDiscarding] = useState(false);
   const pollRef = useRef<number>(0);
 
-  const applyConsultation = useCallback(
-    (next: Consultation, patientName?: string) => {
-      setConsultation(next);
-      if (doctor) {
-        rememberSession(doctor.id, {
-          consultationId: next.id,
-          patientId: next.patient_id,
-          patientName: patientName ?? "Patient",
-          status: next.status,
-        });
-      }
-    },
-    [doctor],
-  );
+  /* The dashboard queue reads `GET /consultations`, so nothing has to be
+     mirrored locally — this only updates the screen. */
+  const applyConsultation = useCallback((next: Consultation) => {
+    setConsultation(next);
+  }, []);
 
   // Initial load: consultation + its patient.
   useEffect(() => {
@@ -71,7 +59,7 @@ export function ConsultationSessionPage() {
         const p = await getPatient(c.patient_id).catch(() => null);
         if (cancelled) return;
         setPatient(p);
-        applyConsultation(c, p?.full_name);
+        applyConsultation(c);
       })
       .catch((err: unknown) => {
         if (!cancelled) {
@@ -90,7 +78,7 @@ export function ConsultationSessionPage() {
       getConsultation(consultation.id)
         .then((next) => {
           if (next.status !== consultation.status) {
-            applyConsultation(next, patient?.full_name);
+            applyConsultation(next);
             if (next.status === "draft_ready") {
               toast({
                 kind: "success",
@@ -110,14 +98,14 @@ export function ConsultationSessionPage() {
         .catch(() => undefined);
     }, POLL_MS);
     return () => window.clearInterval(pollRef.current);
-  }, [consultation, patient?.full_name, applyConsultation, toast]);
+  }, [consultation, applyConsultation, toast]);
 
   async function handleRetry() {
     if (!consultation) return;
     setRetrying(true);
     try {
       const next = await reprocessConsultation(consultation.id);
-      applyConsultation(next, patient?.full_name);
+      applyConsultation(next);
     } catch (err) {
       toast({
         kind: "error",
@@ -134,7 +122,7 @@ export function ConsultationSessionPage() {
     setDiscarding(true);
     try {
       const next = await discardConsultation(consultation.id);
-      applyConsultation(next, patient?.full_name);
+      applyConsultation(next);
       setDiscardOpen(false);
       toast({
         kind: "success",
@@ -267,12 +255,7 @@ export function ConsultationSessionPage() {
         <div className="wiz">
           <CaptureStage
             consultationId={consultation.id}
-            onUploaded={() =>
-              applyConsultation(
-                { ...consultation, status: "uploaded" },
-                patient?.full_name,
-              )
-            }
+            onUploaded={() => applyConsultation({ ...consultation, status: "uploaded" })}
           />
         </div>
       )}
@@ -297,10 +280,7 @@ export function ConsultationSessionPage() {
             onShowTranscript={() => setShowTranscript(true)}
             onDiscard={canDiscard ? () => setDiscardOpen(true) : undefined}
             onFinalized={() =>
-              applyConsultation(
-                { ...consultation, status: "finalized" },
-                patient?.full_name,
-              )
+              applyConsultation({ ...consultation, status: "finalized" })
             }
           />
           <Drawer

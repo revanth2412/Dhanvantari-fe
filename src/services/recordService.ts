@@ -10,7 +10,12 @@ export function getRecord(recordId: string): Promise<ClinicalRecord> {
   return apiRequest<ClinicalRecord>(`/records/${recordId}`);
 }
 
-/** Doctor edit — the backend creates a NEW draft version (never overwrites). */
+/**
+ * Doctor edit — the backend creates a NEW draft version (never overwrites) and
+ * stamps `reviewed_by` from the authenticated doctor. Don't send a name: it's
+ * the signature on a clinical record and the server ignores a client-supplied
+ * one.
+ */
 export function updateRecord(
   recordId: string,
   input: RecordUpdateInput,
@@ -21,13 +26,10 @@ export function updateRecord(
   });
 }
 
-export function finalizeRecord(
-  recordId: string,
-  reviewedBy?: string | null,
-): Promise<ClinicalRecord> {
+/** Sign off the current version. No body — the signer is the caller's JWT. */
+export function finalizeRecord(recordId: string): Promise<ClinicalRecord> {
   return apiRequest<ClinicalRecord>(`/records/${recordId}/finalize`, {
     method: "POST",
-    body: { reviewed_by: reviewedBy ?? null },
   });
 }
 

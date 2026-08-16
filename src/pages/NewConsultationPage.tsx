@@ -3,7 +3,6 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { Check, Search, ShieldCheck, UserPlus } from "lucide-react";
 import { searchPatients } from "@/services/patientService";
 import { createConsultation } from "@/services/consultationService";
-import { rememberSession } from "@/lib/recents";
 import { ageFromDob } from "@/lib/format";
 import type { Patient } from "@/types/patient";
 import type { Consultation } from "@/types/consultation";
@@ -63,12 +62,6 @@ export function NewConsultationPage() {
         consent_confirmed: true,
       });
       setConsultation(created);
-      rememberSession(doctor.id, {
-        consultationId: created.id,
-        patientId: target.id,
-        patientName: target.full_name,
-        status: created.status,
-      });
       setStep(1);
     } catch (err) {
       startedRef.current = false;
@@ -92,13 +85,7 @@ export function NewConsultationPage() {
   }, [presetPatient, doctor]);
 
   function handleUploaded() {
-    if (consultation && doctor && patient) {
-      rememberSession(doctor.id, {
-        consultationId: consultation.id,
-        patientId: patient.id,
-        patientName: patient.full_name,
-        status: "uploaded",
-      });
+    if (consultation) {
       navigate(`/consultations/${consultation.id}`);
     }
   }

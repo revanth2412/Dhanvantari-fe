@@ -171,10 +171,7 @@ export function NotePanel({
     if (!record || !draft) return;
     setSaving(true);
     try {
-      const next = await updateRecord(record.id, {
-        data: draft,
-        reviewed_by: doctor?.full_name ?? null,
-      });
+      const next = await updateRecord(record.id, { data: draft });
       setRecord(next);
       setEditing(false);
       toast({
@@ -197,7 +194,7 @@ export function NotePanel({
     if (!record) return;
     setFinalizing(true);
     try {
-      const next = await finalizeRecord(record.id, doctor?.full_name ?? null);
+      const next = await finalizeRecord(record.id);
       setRecord(next);
       setFinalizeOpen(false);
       toast({

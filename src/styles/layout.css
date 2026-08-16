@@ -512,7 +512,9 @@
     max-width: calc(100vw - 24px);
     margin: 0 auto;
     box-sizing: border-box;
-    overflow: hidden;
+    /* No `overflow: hidden` — the record FAB is deliberately raised above the
+       bar, and clipping it lopped the top off the mic icon. Nothing else in
+       here overflows. */
     padding: 0 4px;
     background: rgba(4, 16, 12, 0.94);
     backdrop-filter: blur(20px);

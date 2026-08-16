@@ -42,7 +42,8 @@ import type {
   ClinicStats,
   MyClinic,
 } from "@/types/clinic";
-import { searchPatients } from "@/services/patientService";
+import { listPatients } from "@/services/patientService";
+import type { Page } from "@/lib/apiClient";
 import type { Patient } from "@/types/patient";
 import {
   ageFromDob,
@@ -169,6 +170,7 @@ export function ClinicPage() {
   const cache = useDataCache();
   const [patientQuery, setPatientQuery] = useState("");
   const debouncedPatientQuery = useDebounce(patientQuery, 260);
+  const [patientLimit, setPatientLimit] = useState(50);
   const [editOpen, setEditOpen] = useState(false);
   const [inviteOpen, setInviteOpen] = useState(false);
   const [switcherOpen, setSwitcherOpen] = useState(false);
@@ -202,12 +204,12 @@ export function ClinicPage() {
     getClinicConsultations,
     { enabled: isClinicAdmin },
   );
-  /* `GET /patients` is widened to the whole clinic for a clinic admin, so this
-     is the clinic directory. The roster page narrows the same data down to the
-     doctor's own patients — the full view belongs here. */
-  const patientsQuery = useCachedQuery<Patient[]>(
-    `patients:list:${debouncedPatientQuery.trim()}`,
-    () => searchPatients(debouncedPatientQuery),
+  /* `GET /patients` without `mine` is widened to the whole clinic for a clinic
+     admin — that's the directory. The roster page passes `mine=true` for the
+     doctor's own patients; the full view belongs here. */
+  const patientsQuery = useCachedQuery<Page<Patient>>(
+    `patients:clinic:${debouncedPatientQuery.trim()}:${patientLimit}`,
+    () => listPatients({ search: debouncedPatientQuery, limit: patientLimit }),
     { enabled: isClinicAdmin },
   );
 
@@ -295,7 +297,8 @@ export function ClinicPage() {
   const stats = statsQuery.data;
   const consultations = consultationsQuery.data ?? [];
   const otherClinics = memberships.filter((m) => m.clinic_id !== clinic.id);
-  const clinicPatients = patientsQuery.data ?? [];
+  const clinicPatients = patientsQuery.data?.items ?? [];
+  const clinicPatientTotal = patientsQuery.data?.total ?? 0;
 
   /** doctor id → name, for attributing consultations to a colleague. */
   const doctorNames = new Map(members.map((m) => [m.doctor_id, m.full_name]));
@@ -702,10 +705,22 @@ export function ClinicPage() {
               })
             )}
           </div>
-          <p className="muted" style={{ fontSize: "0.76rem", marginTop: 8 }}>
-            The directory returns the 50 most recently registered patients — search to
-            reach older records.
-          </p>
+          {clinicPatients.length > 0 && (
+            <div className="pts-foot">
+              <span className="muted">
+                Showing {clinicPatients.length} of {clinicPatientTotal}
+              </span>
+              {clinicPatients.length < clinicPatientTotal && patientLimit < 200 && (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => setPatientLimit((n) => Math.min(n + 50, 200))}
+                >
+                  Load more
+                </Button>
+              )}
+            </div>
+          )}
         </section>
       )}
 

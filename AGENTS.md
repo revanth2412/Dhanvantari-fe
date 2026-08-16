@@ -152,37 +152,47 @@ backend scopes to `Consultation.doctor_id == current doctor`. Rules:
   when the doctor-scoped stat hasn't loaded — render `—` (`.db-bento-pending`).
 - **Patients in care** = `patients_seen` (distinct patients with a non-discarded
   consultation by this doctor), not the size of the patient list.
-- **Time reclaimed** is an estimate and is labelled `EST.`: it multiplies
+- **Consultation time** = `recorded_seconds`, the summed length of the audio
+  actually recorded. Measured, so it's stated plainly.
+- **Time reclaimed** is the one estimate and is labelled `EST.`: it multiplies
   `finalized + draft_ready` (notes the scribe actually produced — failed and
   in-flight consultations produced nothing) by `MINUTES_SAVED_PER_NOTE`, and
   the card states the per-note assumption. No floor, no fabricated baseline.
-- The **sessions queue** is `lib/recents.ts` — the last 12 sessions from *this
-  browser*, because the backend still has no list-consultations endpoint. The
-  queue carries a footnote saying so; don't present its counts as totals.
+- The **sessions queue** is `GET /consultations`: date range and paging are
+  server-side, tab and name filtering run over the loaded page, and the footer
+  says how many of the total are loaded. Nothing is cached per browser.
 
 ## Patient visibility (roster vs clinic directory)
 The backend widens `GET /patients` to the whole clinic for a **clinic admin**
 (`app/scoping.py`). The UI deliberately does not follow that everywhere:
-- **Patients page + dashboard roster** stay personal for everyone, including a
-  clinic admin — `useMyPatients()` intersects the returned list with the
-  patients that admin has actually consulted (patient ids from
-  `GET /clinics/me/consultations`). It never falls back to the clinic-wide list
-  while the log is loading, and the page links to the clinic directory rather
-  than hiding colleagues' patients silently.
-- **Clinic page** carries the full directory with complete detail (contact,
-  language, do-not-call, registration date, consultation count, last visit, and
-  which doctors saw them) — clinic admin only, since the endpoints 403 otherwise.
+- **Patients page + dashboard roster** pass `mine=true`, so they stay personal
+  for everyone including a clinic admin, and the roster says so with a link to
+  the directory. Server-side filtering — no client-side narrowing.
+- **Clinic page** omits `mine`, so it gets the full directory, with complete
+  detail (contact, language, do-not-call, registration date, consultation count,
+  last visit, and which doctors saw them) — clinic admin only, since the
+  clinic endpoints 403 otherwise.
+
+## Paging
+List endpoints take `limit`/`offset` and report the full match count in
+`X-Total-Count` (CORS-exposed). Use `apiList()` from `lib/apiClient`, which
+returns `{ items, total }`; `apiRequest()` stays for single objects. The UI
+raises `limit` to "load more" rather than accumulating offsets, so a page is
+always one request and one cache entry. The API caps `limit` at 200.
 
 ## Consultation provenance
 `components/consultation/ConsultationProvenance.tsx` shows who conducted the
-visit and who signed the note off. Names come from:
-- **Conducted by** — `consultation.doctor_id`, resolved via
-  `useClinicDirectory()`. `GET /clinics/me/members` is clinic-admin only, which
-  matches the scoping: a regular doctor only ever sees their own consultations,
-  so the only id they resolve is their own.
-- **Signed off by** — `record.reviewed_by` + `finalized_at`. `reviewed_by` is
-  also written on every save, so on a draft it means *last edited by* — the
-  component labels it that way rather than implying a signature.
+visit and who signed the note off. Every name is **server-derived** — never
+inferred client-side, never client-set:
+- **Conducted by** — `consultation.doctor_name`.
+- **Signed off by** — `record.finalized_by` + `finalized_at`.
+- `record.reviewed_by` is stamped on every save, so on a draft it means *last
+  edited by* — the component labels it that way rather than implying a
+  signature.
+
+Do **not** send `reviewed_by` on `PUT /records/{id}` or a body to
+`/finalize`: the server derives the signer from the JWT and ignores anything the
+client supplies. That's deliberate — it's the signature on a clinical record.
 
 ## Auth model (important)
 `AuthProvider` computes a single `AuthStatus` used for all routing:

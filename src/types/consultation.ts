@@ -15,12 +15,31 @@ export interface Consultation {
   id: string;
   patient_id: string;
   doctor_id: string | null;
+  /** Name of the doctor who conducted it — server-resolved, no lookup needed. */
+  doctor_name: string | null;
   status: ConsultationStatus;
   consent_confirmed: boolean;
   error_detail: string | null;
   started_at: string | null;
   ended_at: string | null;
   created_at: string;
+}
+
+/** Row shape of `GET /consultations` — adds the patient's name. */
+export interface ConsultationListItem extends Consultation {
+  patient_name: string | null;
+}
+
+/** Filters accepted by `GET /consultations`. */
+export interface ConsultationFilters {
+  patient_id?: string;
+  status?: ConsultationStatus;
+  /** `created_at >= this date` (yyyy-mm-dd, inclusive). */
+  from?: string;
+  /** `created_at <= this date` (yyyy-mm-dd, inclusive). */
+  to?: string;
+  limit?: number;
+  offset?: number;
 }
 
 export interface ConsultationCreateInput {

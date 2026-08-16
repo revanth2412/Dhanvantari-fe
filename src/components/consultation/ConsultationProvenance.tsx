@@ -2,11 +2,11 @@ import { BadgeCheck, PenLine, Stethoscope } from "lucide-react";
 import type { Consultation } from "@/types/consultation";
 import type { ClinicalRecord } from "@/types/record";
 import { formatDateTime } from "@/lib/format";
-import { useClinicDirectory } from "@/hooks/useClinicDirectory";
+import { useAuth } from "@/hooks/useAuth";
 
 interface ConsultationProvenanceProps {
   consultation: Consultation;
-  /** The note, when one exists — carries the sign-off. */
+  /** The note, when one exists — carries the signature. */
   record?: ClinicalRecord | null;
   className?: string;
 }
@@ -15,25 +15,28 @@ interface ConsultationProvenanceProps {
  * Who did what on this consultation: the doctor who conducted it, and the one
  * who signed the note off.
  *
- * `reviewed_by` is a name captured at save/finalize time, so on a draft it
- * means "last edited by" and only becomes a sign-off once the record is final —
- * the labels say which, rather than implying a signature that isn't there.
+ * Every name here is server-derived — `doctor_name` on the consultation,
+ * `reviewed_by` / `finalized_by` on the record — so nothing is inferred and a
+ * client can't misattribute a signature. `reviewed_by` is stamped on every
+ * save, so on a draft it means "last edited by"; the labels say which rather
+ * than implying a signature that isn't there.
  */
 export function ConsultationProvenance({
   consultation,
   record,
   className,
 }: ConsultationProvenanceProps) {
-  const directory = useClinicDirectory();
+  const { doctor } = useAuth();
 
-  const conductedName = directory.nameFor(consultation.doctor_id);
-  const conductedBy = consultation.doctor_id
-    ? (conductedName ?? "Another doctor in this clinic")
-    : "Not recorded";
+  const isSelf = Boolean(consultation.doctor_id && consultation.doctor_id === doctor?.id);
+  const conductedBy =
+    consultation.doctor_name ??
+    (consultation.doctor_id ? "Another doctor in this clinic" : "Not recorded");
   const startedAt = consultation.started_at ?? consultation.created_at;
 
   const isFinal = record?.status === "final";
-  const reviewer = record?.reviewed_by?.trim() || null;
+  const signedBy = record?.finalized_by?.trim() || null;
+  const editedBy = record?.reviewed_by?.trim() || null;
 
   return (
     <div className={`prov ${className ?? ""}`}>
@@ -42,9 +45,7 @@ export function ConsultationProvenance({
         <span className="prov__k">Conducted by</span>
         <strong className="prov__v">
           {conductedBy}
-          {directory.isSelf(consultation.doctor_id) && (
-            <span className="prov__you">you</span>
-          )}
+          {isSelf && <span className="prov__you">you</span>}
         </strong>
         {startedAt && <span className="prov__when">{formatDateTime(startedAt)}</span>}
       </span>
@@ -53,7 +54,7 @@ export function ConsultationProvenance({
         <span className="prov__item prov__item--final">
           <BadgeCheck size={13} className="prov__icon" />
           <span className="prov__k">Signed off by</span>
-          <strong className="prov__v">{reviewer ?? "Unrecorded"}</strong>
+          <strong className="prov__v">{signedBy ?? editedBy ?? "Unrecorded"}</strong>
           {record?.finalized_at && (
             <span className="prov__when">{formatDateTime(record.finalized_at)}</span>
           )}
@@ -61,10 +62,10 @@ export function ConsultationProvenance({
       ) : (
         <span className="prov__item">
           <PenLine size={13} className="prov__icon" />
-          {reviewer ? (
+          {editedBy ? (
             <>
               <span className="prov__k">Last edited by</span>
-              <strong className="prov__v">{reviewer}</strong>
+              <strong className="prov__v">{editedBy}</strong>
               <span className="prov__when">not signed off yet</span>
             </>
           ) : (

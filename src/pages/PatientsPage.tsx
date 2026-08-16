@@ -11,7 +11,8 @@ import {
   Users,
   UsersRound,
 } from "lucide-react";
-import { searchPatients } from "@/services/patientService";
+import { listPatients } from "@/services/patientService";
+import type { Page } from "@/lib/apiClient";
 import type { Patient } from "@/types/patient";
 import { ageFromDob, formatDate } from "@/lib/format";
 import { haptic } from "@/lib/haptics";
@@ -23,7 +24,6 @@ import { PatientFormDrawer } from "@/components/patients/PatientFormDrawer";
 import { useAuth } from "@/hooks/useAuth";
 import { useCachedQuery } from "@/hooks/useCachedQuery";
 import { useDebounce } from "@/hooks/useDebounce";
-import { useMyPatients } from "@/hooks/useMyPatients";
 
 export function PatientsPage() {
   const navigate = useNavigate();
@@ -37,19 +37,20 @@ export function PatientsPage() {
     "all",
   );
 
-  // Cached query
-  const { data, loading } = useCachedQuery<Patient[]>(
-    `patients:list:${debouncedQuery.trim()}`,
-    () => searchPatients(debouncedQuery),
+  const [limit, setLimit] = useState(50);
+
+  /* `mine=true` keeps this roster personal even for a clinic admin, whose
+     scope would otherwise be the whole clinic. The clinic-wide directory
+     lives on the clinic page. */
+  const { data, loading } = useCachedQuery<Page<Patient>>(
+    `patients:mine:${debouncedQuery.trim()}:${limit}`,
+    () => listPatients({ search: debouncedQuery, mine: true, limit }),
   );
 
-  const fetched = useMemo(() => {
-    return loading ? null : (data ?? []);
+  const allPatients = useMemo(() => {
+    return loading ? null : (data?.items ?? []);
   }, [loading, data]);
-
-  // This roster is the doctor's own, even for a clinic admin — the clinic-wide
-  // directory lives on the clinic page.
-  const { patients: allPatients, narrowed, hiddenCount } = useMyPatients(fetched);
+  const totalPatients = data?.total ?? 0;
 
   // Filtered patients
   const filteredPatients = useMemo(() => {
@@ -125,20 +126,17 @@ export function PatientsPage() {
             )}
           </p>
           {/* A clinic admin's roster stays personal; point them at the full
-              directory rather than silently hiding colleagues' patients. */}
-          {narrowed && hiddenCount > 0 && (
-            <p className="pts-scope-note">
-              <UsersRound size={12} />
-              <span>
-                {hiddenCount} more patient{hiddenCount === 1 ? "" : "s"} in this clinic
-                were seen by colleagues —{" "}
-                <button type="button" onClick={() => navigate("/clinic")}>
-                  view the clinic directory
-                </button>
-                .
-              </span>
-            </p>
-          )}
+              directory rather than leaving them wondering where the rest went. */}
+          <p className="pts-scope-note">
+            <UsersRound size={12} />
+            <span>
+              Patients you registered.{" "}
+              <button type="button" onClick={() => navigate("/clinic")}>
+                The clinic directory
+              </button>{" "}
+              lists everyone, if you administer this clinic.
+            </span>
+          </p>
         </div>
 
         <div className="pts-header__actions">
@@ -175,7 +173,7 @@ export function PatientsPage() {
             className={`pts-chip ${filterGender === "all" ? "pts-chip--active" : ""}`}
             onClick={() => setFilterGender("all")}
           >
-            All Patients ({allPatients?.length ?? 0})
+            All Patients ({totalPatients})
           </button>
           <button
             type="button"
@@ -214,9 +212,7 @@ export function PatientsPage() {
             message={
               query
                 ? "Try searching by a different name, phone number, or clear filters."
-                : narrowed && hiddenCount > 0
-                  ? "You haven't consulted anyone here yet. Colleagues' patients are listed on the clinic page."
-                  : "Register your first patient to begin capturing ambient clinical documentation."
+                : "Register your first patient to begin capturing ambient clinical documentation."
             }
             action={
               !query && (
@@ -319,6 +315,24 @@ export function PatientsPage() {
           </div>
         )}
       </div>
+
+      {/* Paging: the API caps a page at 200, so say what's loaded. */}
+      {allPatients && allPatients.length > 0 && (
+        <div className="pts-foot">
+          <span className="muted">
+            Showing {allPatients.length} of {totalPatients}
+          </span>
+          {allPatients.length < totalPatients && limit < 200 && (
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => setLimit((n) => Math.min(n + 50, 200))}
+            >
+              Load more
+            </Button>
+          )}
+        </div>
+      )}
 
       {/* Patient Form Drawer */}
       <PatientFormDrawer

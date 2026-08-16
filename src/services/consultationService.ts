@@ -1,10 +1,33 @@
-import { apiRequest } from "@/lib/apiClient";
+import { apiList, apiRequest, queryString, type Page } from "@/lib/apiClient";
 import type {
   Consultation,
   ConsultationCreateInput,
+  ConsultationFilters,
+  ConsultationListItem,
   Recording,
   Transcript,
 } from "@/types/consultation";
+
+/**
+ * `GET /consultations` — the caller's consultations, newest first: their own
+ * for a regular doctor, the whole clinic for a clinic admin. Filtering by date
+ * and status happens server-side, so the list is authoritative rather than
+ * whatever this browser happens to remember.
+ */
+export function listConsultations(
+  filters: ConsultationFilters = {},
+  signal?: AbortSignal,
+): Promise<Page<ConsultationListItem>> {
+  const qs = queryString({
+    patient_id: filters.patient_id,
+    status: filters.status,
+    from: filters.from,
+    to: filters.to,
+    limit: filters.limit,
+    offset: filters.offset,
+  });
+  return apiList<ConsultationListItem>(`/consultations${qs}`, { signal });
+}
 
 export function createConsultation(
   input: ConsultationCreateInput,
@@ -48,6 +71,11 @@ export function discardConsultation(consultationId: string): Promise<Consultatio
   return apiRequest<Consultation>(`/consultations/${consultationId}/discard`, {
     method: "POST",
   });
+}
+
+/** Latest recording metadata — `duration_s` is the measured audio length. */
+export function getRecording(consultationId: string): Promise<Recording> {
+  return apiRequest<Recording>(`/consultations/${consultationId}/recording`);
 }
 
 /** Latest diarized transcript (404 while not ready). */

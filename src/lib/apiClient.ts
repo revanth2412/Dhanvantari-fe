@@ -32,8 +32,51 @@ interface RequestOptions {
  */
 export async function apiRequest<T>(
   path: string,
-  { method = "GET", body, formData, auth = true, signal }: RequestOptions = {},
+  options: RequestOptions = {},
 ): Promise<T> {
+  return (await request<T>(path, options)).data;
+}
+
+/** A page of results plus the server's total match count. */
+export interface Page<T> {
+  items: T[];
+  /** From `X-Total-Count`; falls back to the page length if absent. */
+  total: number;
+}
+
+/**
+ * List endpoints that paginate. The backend reports the full match count in
+ * `X-Total-Count`, which the body can't carry — hence a separate helper rather
+ * than a flag on `apiRequest`.
+ */
+export async function apiList<T>(
+  path: string,
+  options: RequestOptions = {},
+): Promise<Page<T>> {
+  const { data, headers } = await request<T[]>(path, options);
+  const items = data ?? [];
+  const header = headers.get("X-Total-Count");
+  const total = header === null ? items.length : Number(header);
+  return { items, total: Number.isFinite(total) ? total : items.length };
+}
+
+/** Builds `?a=1&b=2`, dropping empty values so a blank filter isn't sent. */
+export function queryString(
+  params: Record<string, string | number | boolean | undefined | null>,
+): string {
+  const search = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) {
+    if (value === undefined || value === null || value === "") continue;
+    search.set(key, String(value));
+  }
+  const qs = search.toString();
+  return qs ? `?${qs}` : "";
+}
+
+async function request<T>(
+  path: string,
+  { method = "GET", body, formData, auth = true, signal }: RequestOptions = {},
+): Promise<{ data: T; headers: Headers }> {
   const headers: Record<string, string> = {};
 
   if (body !== undefined) {
@@ -67,5 +110,5 @@ export async function apiRequest<T>(
     throw new ApiError(response.status, message, payload);
   }
 
-  return payload as T;
+  return { data: payload as T, headers: response.headers };
 }

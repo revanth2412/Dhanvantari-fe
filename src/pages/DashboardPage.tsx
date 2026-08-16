@@ -21,13 +21,14 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useCachedQuery } from "@/hooks/useCachedQuery";
-import { useMyPatients } from "@/hooks/useMyPatients";
-import { searchPatients } from "@/services/patientService";
+import { listPatients } from "@/services/patientService";
+import { listConsultations } from "@/services/consultationService";
 import { getMyStats } from "@/services/statsService";
-import { getRecentSessions, type RecentSession } from "@/lib/recents";
 import { consultationStatusMeta, timeAgo } from "@/lib/format";
 import { haptic } from "@/lib/haptics";
+import type { Page } from "@/lib/apiClient";
 import type { Patient } from "@/types/patient";
+import type { ConsultationListItem, ConsultationStatus } from "@/types/consultation";
 import { Avatar } from "@/components/ui/Avatar";
 import { Badge } from "@/components/ui/Badge";
 import { BrandMark } from "@/components/ui/BrandMark";
@@ -46,8 +47,24 @@ const IN_FLIGHT = ["uploaded", "transcribing", "extracting"] as const;
  */
 const MINUTES_SAVED_PER_NOTE = 15;
 
-function isInFlight(status: RecentSession["status"]): boolean {
+function isInFlight(status: ConsultationStatus): boolean {
   return (IN_FLIGHT as readonly string[]).includes(status);
+}
+
+/** How many rows the queue asks for; "Load more" raises it to the API's cap. */
+const PAGE_STEP = 25;
+const PAGE_MAX = 200;
+
+/** Seconds → "3.4 hrs" / "42 min", for measured audio durations. */
+function humanDuration(seconds: number): {
+  value: number;
+  suffix: string;
+  decimals: number;
+} {
+  if (seconds < 3600) {
+    return { value: Math.round(seconds / 60), suffix: " min", decimals: 0 };
+  }
+  return { value: Math.round(seconds / 360) / 10, suffix: " hrs", decimals: 1 };
 }
 
 /** `yyyy-mm-dd` in local time — what `<input type="date">` expects. */
@@ -103,81 +120,88 @@ export function DashboardPage() {
 
   // States
   const [filterTab, setFilterTab] = useState<
-    "all" | "drafts" | "in_flight" | "finalized"
+    "all" | "drafts" | "in_flight" | "finalized" | "discarded"
   >("all");
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [drawerOpen, setDrawerOpen] = useState<boolean>(false);
 
-  // Fetch recent sessions & stats
-  const recents = useMemo(
-    () =>
-      doctor
-        ? getRecentSessions(doctor.id).filter((item) => item.status !== "discarded")
-        : [],
-    [doctor],
-  );
+  // Date range for the session queue (empty string = open-ended), applied by
+  // the server so the filter reaches the whole history, not just a page.
+  const [fromDate, setFromDate] = useState<string>("");
+  const [toDate, setToDate] = useState<string>("");
+  const [limit, setLimit] = useState<number>(PAGE_STEP);
 
-  const { data: patientsData, loading: patientsLoading } = useCachedQuery<Patient[]>(
-    "patients:list:",
-    () => searchPatients(),
+  // `mine` keeps a clinic admin's roster personal — their clinic-wide view is
+  // the clinic page. A regular doctor is scoped to their own patients anyway.
+  const { data: patientsData, loading: patientsLoading } = useCachedQuery<Page<Patient>>(
+    "patients:mine:",
+    () => listPatients({ mine: true, limit: 12 }),
   );
   // `GET /stats/me` is scoped to the signed-in doctor by the backend: counts
   // cover only consultations where `doctor_id` is this doctor.
   const { data: statsData } = useCachedQuery("stats:me", () => getMyStats());
 
-  const fetchedPatients = useMemo(() => {
-    return patientsLoading ? null : (patientsData ?? []);
+  const patients = useMemo(() => {
+    return patientsLoading ? null : (patientsData?.items ?? []);
   }, [patientsLoading, patientsData]);
-  // Same rule as the roster page: a clinic admin's own patients, not the
-  // clinic's. The clinic-wide directory lives on the clinic page.
-  const { patients } = useMyPatients(fetchedPatients);
 
-  // Date range for the session queue (empty string = open-ended).
-  const [fromDate, setFromDate] = useState<string>("");
-  const [toDate, setToDate] = useState<string>("");
+  /* The queue is the server's list — every consultation this doctor conducted
+     (the whole clinic's, for a clinic admin), not a per-browser cache. */
+  const sessionsQuery = useCachedQuery<Page<ConsultationListItem>>(
+    `consultations:list:${fromDate}:${toDate}:${limit}`,
+    () =>
+      listConsultations({
+        from: fromDate || undefined,
+        to: toDate || undefined,
+        limit,
+      }),
+    { ttlMs: 30_000 },
+  );
+  const loadedSessions = useMemo(
+    () => sessionsQuery.data?.items ?? [],
+    [sessionsQuery.data],
+  );
+  const totalSessions = sessionsQuery.data?.total ?? 0;
 
+  // Discarded sessions are hidden unless explicitly asked for.
+  const activeSessions = useMemo(
+    () => loadedSessions.filter((item) => item.status !== "discarded"),
+    [loadedSessions],
+  );
   const drafts = useMemo(
-    () => recents.filter((item) => item.status === "draft_ready"),
-    [recents],
+    () => activeSessions.filter((item) => item.status === "draft_ready"),
+    [activeSessions],
   );
   const live = useMemo(
-    () => recents.filter((item) => isInFlight(item.status)),
-    [recents],
+    () => activeSessions.filter((item) => isInFlight(item.status)),
+    [activeSessions],
   );
   const finalized = useMemo(
-    () => recents.filter((item) => item.status === "finalized"),
-    [recents],
+    () => activeSessions.filter((item) => item.status === "finalized"),
+    [activeSessions],
+  );
+  const discarded = useMemo(
+    () => loadedSessions.filter((item) => item.status === "discarded"),
+    [loadedSessions],
   );
 
   const firstName = doctor?.full_name?.split(" ")[0] ?? "Doctor";
 
-  // Filtered session list
+  // Tab + name filtering runs over the loaded page; the date range and paging
+  // are the server's job.
   const filteredSessions = useMemo(() => {
-    let list = recents;
+    let list = activeSessions;
     if (filterTab === "drafts") list = drafts;
     else if (filterTab === "in_flight") list = live;
     else if (filterTab === "finalized") list = finalized;
+    else if (filterTab === "discarded") list = discarded;
 
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
-      list = list.filter((s) => s.patientName.toLowerCase().includes(q));
+      list = list.filter((s) => (s.patient_name ?? "").toLowerCase().includes(q));
     }
-
-    // Date range, inclusive on both ends; either bound may be left open.
-    const fromTs = fromDate ? new Date(`${fromDate}T00:00:00`).getTime() : null;
-    const toTs = toDate ? new Date(`${toDate}T23:59:59.999`).getTime() : null;
-    if (fromTs !== null || toTs !== null) {
-      list = list.filter((s) => {
-        const sessionTime = new Date(s.updatedAt).getTime();
-        if (isNaN(sessionTime)) return false;
-        if (fromTs !== null && sessionTime < fromTs) return false;
-        if (toTs !== null && sessionTime > toTs) return false;
-        return true;
-      });
-    }
-
     return list;
-  }, [recents, drafts, live, finalized, filterTab, searchQuery, fromDate, toDate]);
+  }, [activeSessions, drafts, live, finalized, discarded, filterTab, searchQuery]);
 
   /* ---- metrics: every number below comes from the doctor's own /stats/me ---- */
 
@@ -187,6 +211,9 @@ export function DashboardPage() {
   const minutesReclaimed =
     notesDrafted === null ? null : notesDrafted * MINUTES_SAVED_PER_NOTE;
   const pendingSignOff = statsData?.draft_ready ?? drafts.length;
+  // Measured, not assumed: the summed length of the audio actually recorded.
+  const recordedSeconds = statsData?.recorded_seconds ?? null;
+  const recorded = recordedSeconds === null ? null : humanDuration(recordedSeconds);
 
   // GSAP Entrance Animations
   useEffect(() => {
@@ -276,7 +303,12 @@ export function DashboardPage() {
         </div>
 
         <div className="db-telemetry-center">
-          <div className="db-security-badge">
+          {/* On a phone this collapses to the shield alone — the title keeps
+              the meaning reachable. */}
+          <div
+            className="db-security-badge"
+            title="DPDP Act 2023 enforced · Data encryption active"
+          >
             <ShieldCheck size={13} className="db-icon-emerald" />
             <span>DPDP Act 2023 Enforced · Data Encryption Active</span>
           </div>
@@ -407,31 +439,35 @@ export function DashboardPage() {
           </div>
         </article>
 
-        {/* Metric 4: recent workload */}
+        {/* Metric 4: measured consultation audio (not an estimate) */}
         <article className="db-bento-card" data-dash-card>
           <div className="db-bento-top">
-            <span className="db-bento-label">LAST 7 DAYS</span>
+            <span className="db-bento-label">CONSULTATION TIME</span>
             <div className="db-bento-icon db-bento-icon--cyan">
               <CalendarClock size={18} />
             </div>
           </div>
           <div className="db-bento-value">
-            {statsData ? (
-              <StatCounter value={statsData.consultations_last_7_days} />
-            ) : (
+            {recorded === null ? (
               <span className="db-bento-pending">—</span>
+            ) : (
+              <StatCounter
+                value={recorded.value}
+                decimals={recorded.decimals}
+                suffix={recorded.suffix}
+              />
             )}
           </div>
           <div className="db-bento-footer">
             <span className="db-tag-pill db-tag-pill--cyan">
               {statsData
-                ? `${statsData.consultations_last_30_days} in 30 days`
-                : "Consultations"}
+                ? `${statsData.consultations_last_7_days} in the last 7 days`
+                : "Recorded audio"}
             </span>
             <span className="db-bento-sub">
               {statsData
-                ? `${statsData.total_consultations} total · ${statsData.finalized} finalized`
-                : "Your consultations"}
+                ? `${statsData.total_consultations} consultations · ${statsData.finalized} finalized`
+                : "Measured from your recordings"}
             </span>
           </div>
         </article>
@@ -528,54 +564,50 @@ export function DashboardPage() {
               </div>
             </div>
 
-            {/* Filter Tabs */}
+            {/* Filter Tabs — counts are for the loaded rows. */}
             <div className="db-feed-tabs">
-              <button
-                type="button"
-                className={`db-feed-tab ${filterTab === "all" ? "db-feed-tab--active" : ""}`}
-                onClick={() => setFilterTab("all")}
-              >
-                All ({recents.length})
-              </button>
-              <button
-                type="button"
-                className={`db-feed-tab ${filterTab === "drafts" ? "db-feed-tab--active" : ""}`}
-                onClick={() => setFilterTab("drafts")}
-              >
-                Needs Sign-off ({drafts.length})
-              </button>
-              <button
-                type="button"
-                className={`db-feed-tab ${filterTab === "in_flight" ? "db-feed-tab--active" : ""}`}
-                onClick={() => setFilterTab("in_flight")}
-              >
-                Processing ({live.length})
-              </button>
-              <button
-                type="button"
-                className={`db-feed-tab ${filterTab === "finalized" ? "db-feed-tab--active" : ""}`}
-                onClick={() => setFilterTab("finalized")}
-              >
-                Finalized ({finalized.length})
-              </button>
+              {(
+                [
+                  ["all", "All", activeSessions.length],
+                  ["drafts", "Needs Sign-off", drafts.length],
+                  ["in_flight", "Processing", live.length],
+                  ["finalized", "Finalized", finalized.length],
+                  ["discarded", "Discarded", discarded.length],
+                ] as const
+              ).map(([key, label, count]) => (
+                <button
+                  key={key}
+                  type="button"
+                  className={`db-feed-tab ${filterTab === key ? "db-feed-tab--active" : ""}`}
+                  onClick={() => setFilterTab(key)}
+                >
+                  {label} ({count})
+                </button>
+              ))}
             </div>
           </div>
 
           {/* Session List */}
           <div className="db-session-list">
-            {filteredSessions.length === 0 ? (
+            {sessionsQuery.loading ? (
+              <SkeletonRows rows={5} height={58} />
+            ) : filteredSessions.length === 0 ? (
               <div className="db-empty-feed">
                 <EmptyState
                   icon={<AudioLines size={24} />}
                   title={
                     searchQuery
                       ? "No sessions match search"
-                      : "No consultations in this queue"
+                      : fromDate || toDate
+                        ? "No consultations in this date range"
+                        : "No consultations in this queue"
                   }
                   message={
                     searchQuery
                       ? "Try searching by a different patient name."
-                      : "Start a consultation to automatically generate structured clinical notes."
+                      : fromDate || toDate
+                        ? "Widen the range, or clear it to see everything."
+                        : "Start a consultation to automatically generate structured clinical notes."
                   }
                   action={
                     !searchQuery && (
@@ -592,25 +624,38 @@ export function DashboardPage() {
                 const isDraft = session.status === "draft_ready";
                 const isRunning = isInFlight(session.status);
 
+                const patientName = session.patient_name ?? "Patient";
+                // Only worth naming the doctor when it isn't the viewer — a
+                // clinic admin sees the whole clinic's queue here.
+                const otherDoctor =
+                  session.doctor_id && session.doctor_id !== doctor?.id
+                    ? session.doctor_name
+                    : null;
+
                 return (
                   <article
-                    key={session.consultationId}
+                    key={session.id}
                     className={`db-session-card ${isDraft ? "db-session-card--draft" : ""} ${
                       isRunning ? "db-session-card--live" : ""
                     }`}
-                    onClick={() => handleOpenSession(session.consultationId)}
+                    onClick={() => handleOpenSession(session.id)}
                     data-session-item
                   >
                     <div className="db-sc-avatar">
-                      <Avatar name={session.patientName} size={40} />
+                      <Avatar name={patientName} size={40} />
                     </div>
 
                     <div className="db-sc-body">
-                      <strong className="db-sc-name">{session.patientName}</strong>
+                      <strong className="db-sc-name">{patientName}</strong>
                       <div className="db-sc-meta">
                         <span className="db-sc-time">
-                          <Clock size={12} /> {timeAgo(session.updatedAt)}
+                          <Clock size={12} /> {timeAgo(session.created_at)}
                         </span>
+                        {otherDoctor && (
+                          <span className="db-sc-time">
+                            <Stethoscope size={12} /> {otherDoctor}
+                          </span>
+                        )}
                         {isDraft && (
                           <span className="db-sc-draft-tag">
                             <Sparkles size={11} /> Review &amp; Sign
@@ -628,7 +673,7 @@ export function DashboardPage() {
                         className={`db-sc-btn ${isDraft ? "db-sc-btn--primary" : ""}`}
                         onClick={(e) => {
                           e.stopPropagation();
-                          handleOpenSession(session.consultationId);
+                          handleOpenSession(session.id);
                         }}
                       >
                         {isDraft ? "Review" : isRunning ? "View Status" : "Open Note"}
@@ -641,14 +686,24 @@ export function DashboardPage() {
             )}
           </div>
 
-          {/* The counts above are this queue's, not the doctor's full history:
-              there is no list-consultations endpoint yet, so the queue is a
-              local log of recent sessions. Say so rather than imply totals. */}
-          {recents.length > 0 && (
-            <p className="db-feed-note">
-              Recent sessions from this device. Totals in the cards above come from your
-              full record on the server.
-            </p>
+          {/* Paging: the loaded window vs the server's total for this range. */}
+          {loadedSessions.length > 0 && (
+            <div className="db-feed-foot">
+              <span className="db-feed-note">
+                Showing {loadedSessions.length} of {totalSessions}
+                {fromDate || toDate ? " in this range" : ""}
+              </span>
+              {loadedSessions.length < totalSessions && limit < PAGE_MAX && (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  loading={sessionsQuery.refreshing}
+                  onClick={() => setLimit((n) => Math.min(n + PAGE_STEP, PAGE_MAX))}
+                >
+                  Load more
+                </Button>
+              )}
+            </div>
           )}
         </section>
 
