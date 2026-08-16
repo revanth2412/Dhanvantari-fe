@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
+/* Owned by this route: keeps ~40% of the stylesheet out of the workspace bundle. */
+import "@/styles/landing.css";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { BrandMark } from "@/components/ui/BrandMark";
@@ -25,6 +27,7 @@ import {
   Languages,
   Layers,
   Lock,
+  Mail,
   MessageSquare,
   Mic,
   Pause,
@@ -65,7 +68,12 @@ interface ClinicalScenario {
     historyOfPresentIllness: string;
     vitals: string;
     assessment: string;
-    prescriptions: Array<{ drug: string; dosage: string; duration: string; instructions: string }>;
+    prescriptions: Array<{
+      drug: string;
+      dosage: string;
+      duration: string;
+      instructions: string;
+    }>;
     investigations: string[];
     advice: string[];
     redFlags: string[];
@@ -86,26 +94,69 @@ const CLINICAL_SCENARIOS: ClinicalScenario[] = [
       vitals: "BP: 154/94 mmHg · HR: 88 bpm · SpO2: 98%",
     },
     dialogue: [
-      { speaker: "doctor", text: "Good morning Mr. Verma. What brings you to the cardiology clinic today?" },
-      { speaker: "patient", text: "Doctor, for the past 4 days, I've had this tight squeezing pressure in the center of my chest whenever I climb the stairs." },
-      { speaker: "doctor", text: "Does the pain radiate to your left shoulder, jaw, or down your arm? Any sweating or shortness of breath?" },
-      { speaker: "patient", text: "Yes, it travels slightly towards my left shoulder. It subsides within 5 minutes if I sit down and rest." },
-      { speaker: "doctor", text: "Understood. Let's check your blood pressure. 154 over 94. We are starting you on Telmisartan 40mg for BP control, Atorvastatin 20mg for cholesterol, and Sorbitrate 5mg sublingual if acute chest discomfort strikes. We will also do a 12-lead ECG, 2D ECHO, and fasting lipid profile right away." },
+      {
+        speaker: "doctor",
+        text: "Good morning Mr. Verma. What brings you to the cardiology clinic today?",
+      },
+      {
+        speaker: "patient",
+        text: "Doctor, for the past 4 days, I've had this tight squeezing pressure in the center of my chest whenever I climb the stairs.",
+      },
+      {
+        speaker: "doctor",
+        text: "Does the pain radiate to your left shoulder, jaw, or down your arm? Any sweating or shortness of breath?",
+      },
+      {
+        speaker: "patient",
+        text: "Yes, it travels slightly towards my left shoulder. It subsides within 5 minutes if I sit down and rest.",
+      },
+      {
+        speaker: "doctor",
+        text: "Understood. Let's check your blood pressure. 154 over 94. We are starting you on Telmisartan 40mg for BP control, Atorvastatin 20mg for cholesterol, and Sorbitrate 5mg sublingual if acute chest discomfort strikes. We will also do a 12-lead ECG, 2D ECHO, and fasting lipid profile right away.",
+      },
     ],
     extractedNote: {
       chiefComplaint: "Retrosternal squeezing chest discomfort on exertion x 4 days",
-      historyOfPresentIllness: "58M with exertional chest pressure radiating to left shoulder, relieved with rest within 5 min. Associated mild dyspnea, no diaphoresis or syncope.",
+      historyOfPresentIllness:
+        "58M with exertional chest pressure radiating to left shoulder, relieved with rest within 5 min. Associated mild dyspnea, no diaphoresis or syncope.",
       vitals: "BP: 154/94 mmHg (Stage 2 HTN), HR: 88 bpm, SpO2: 98% on room air",
-      assessment: "1. Suspected Exertional Angina Pectoris (Class II NYHA)\n2. Stage 2 Essential Hypertension\n3. Dyslipidemia (evaluation)",
+      assessment:
+        "1. Suspected Exertional Angina Pectoris (Class II NYHA)\n2. Stage 2 Essential Hypertension\n3. Dyslipidemia (evaluation)",
       icd10: "I20.9 (Angina Pectoris, Unspecified) / I10 (Essential Hypertension)",
       prescriptions: [
-        { drug: "Tab. Telmisartan", dosage: "40 mg", duration: "30 Days", instructions: "1 tab OD (Morning, after food)" },
-        { drug: "Tab. Atorvastatin", dosage: "20 mg", duration: "30 Days", instructions: "1 tab HS (Bedtime)" },
-        { drug: "Tab. Sorbitrate", dosage: "5 mg", duration: "SOS", instructions: "Sublingual PRN for acute chest pain" },
+        {
+          drug: "Tab. Telmisartan",
+          dosage: "40 mg",
+          duration: "30 Days",
+          instructions: "1 tab OD (Morning, after food)",
+        },
+        {
+          drug: "Tab. Atorvastatin",
+          dosage: "20 mg",
+          duration: "30 Days",
+          instructions: "1 tab HS (Bedtime)",
+        },
+        {
+          drug: "Tab. Sorbitrate",
+          dosage: "5 mg",
+          duration: "SOS",
+          instructions: "Sublingual PRN for acute chest pain",
+        },
       ],
-      investigations: ["12-Lead Electrocardiogram (ECG)", "2D Echocardiography with Doppler", "Fasting Lipid Profile & Hs-Troponin I"],
-      advice: ["Strict low-salt (<2g/day), cardiac-healthy diet", "Avoid strenuous physical exertion until treadmill evaluation", "Immediate emergency visit if pain lasts > 15 minutes"],
-      redFlags: ["Chest pain unresponsive to rest / sublingual nitrate", "Acute dyspnea, syncope, or diaphoresis"],
+      investigations: [
+        "12-Lead Electrocardiogram (ECG)",
+        "2D Echocardiography with Doppler",
+        "Fasting Lipid Profile & Hs-Troponin I",
+      ],
+      advice: [
+        "Strict low-salt (<2g/day), cardiac-healthy diet",
+        "Avoid strenuous physical exertion until treadmill evaluation",
+        "Immediate emergency visit if pain lasts > 15 minutes",
+      ],
+      redFlags: [
+        "Chest pain unresponsive to rest / sublingual nitrate",
+        "Acute dyspnea, syncope, or diaphoresis",
+      ],
       confidence: 99.4,
     },
   },
@@ -120,26 +171,70 @@ const CLINICAL_SCENARIOS: ClinicalScenario[] = [
       vitals: "BP: 128/82 mmHg · BMI: 28.4 · Fasting Glucose: 186 mg/dL",
     },
     dialogue: [
-      { speaker: "doctor", text: "Hello Sunita ji. How have your sugar readings and energy levels been over the last month?" },
-      { speaker: "patient", text: "I've been feeling extremely fatigued lately, doctor. I find myself drinking 4 liters of water a day and waking up twice at night to urinate." },
-      { speaker: "doctor", text: "Your recent fasting blood sugar came back at 186 and HbA1c is 8.6%. Any burning sensation or tingling in your feet?" },
-      { speaker: "patient", text: "Yes, especially in my soles when I go to sleep at night." },
-      { speaker: "doctor", text: "We need to optimize your glycemic control. We will increase your Metformin to 1000mg extended release with dinner, add Teneligliptin 20mg in the morning, and start Methylcobalamin with Pregabalin for peripheral neuropathy. Let's re-test renal function and urine microalbumin." },
+      {
+        speaker: "doctor",
+        text: "Hello Sunita ji. How have your sugar readings and energy levels been over the last month?",
+      },
+      {
+        speaker: "patient",
+        text: "I've been feeling extremely fatigued lately, doctor. I find myself drinking 4 liters of water a day and waking up twice at night to urinate.",
+      },
+      {
+        speaker: "doctor",
+        text: "Your recent fasting blood sugar came back at 186 and HbA1c is 8.6%. Any burning sensation or tingling in your feet?",
+      },
+      {
+        speaker: "patient",
+        text: "Yes, especially in my soles when I go to sleep at night.",
+      },
+      {
+        speaker: "doctor",
+        text: "We need to optimize your glycemic control. We will increase your Metformin to 1000mg extended release with dinner, add Teneligliptin 20mg in the morning, and start Methylcobalamin with Pregabalin for peripheral neuropathy. Let's re-test renal function and urine microalbumin.",
+      },
     ],
     extractedNote: {
       chiefComplaint: "Severe fatigue, polydipsia, and nocturnal polyuria x 1 month",
-      historyOfPresentIllness: "49F with known T2DM presenting with osmotic symptoms (polydipsia, polyuria) and bilateral nocturnal burning paresthesias in feet. Non-adherent to prior diet regimen.",
-      vitals: "BP: 128/82 mmHg, Weight: 72 kg, BMI: 28.4 kg/m², Fasting Plasma Glucose: 186 mg/dL, HbA1c: 8.6%",
-      assessment: "1. Uncontrolled Type 2 Diabetes Mellitus with poor glycemic target\n2. Early Diabetic Peripheral Neuropathy\n3. Overweight (BMI 28.4)",
+      historyOfPresentIllness:
+        "49F with known T2DM presenting with osmotic symptoms (polydipsia, polyuria) and bilateral nocturnal burning paresthesias in feet. Non-adherent to prior diet regimen.",
+      vitals:
+        "BP: 128/82 mmHg, Weight: 72 kg, BMI: 28.4 kg/m², Fasting Plasma Glucose: 186 mg/dL, HbA1c: 8.6%",
+      assessment:
+        "1. Uncontrolled Type 2 Diabetes Mellitus with poor glycemic target\n2. Early Diabetic Peripheral Neuropathy\n3. Overweight (BMI 28.4)",
       icd10: "E11.40 (Type 2 DM with Neuropathy) / E11.65 (Uncontrolled T2DM)",
       prescriptions: [
-        { drug: "Tab. Metformin SR", dosage: "1000 mg", duration: "60 Days", instructions: "1 tab with evening meal" },
-        { drug: "Tab. Teneligliptin", dosage: "20 mg", duration: "60 Days", instructions: "1 tab OD before breakfast" },
-        { drug: "Cap. Methylcobalamin + Pregabalin", dosage: "75/750 mcg", duration: "30 Days", instructions: "1 cap HS at bedtime" },
+        {
+          drug: "Tab. Metformin SR",
+          dosage: "1000 mg",
+          duration: "60 Days",
+          instructions: "1 tab with evening meal",
+        },
+        {
+          drug: "Tab. Teneligliptin",
+          dosage: "20 mg",
+          duration: "60 Days",
+          instructions: "1 tab OD before breakfast",
+        },
+        {
+          drug: "Cap. Methylcobalamin + Pregabalin",
+          dosage: "75/750 mcg",
+          duration: "30 Days",
+          instructions: "1 cap HS at bedtime",
+        },
       ],
-      investigations: ["Serum Creatinine, eGFR, Blood Urea", "Spot Urine Albumin-to-Creatinine Ratio (UACR)", "Fundus Examination for Retinopathy"],
-      advice: ["Diabetic nutrition plan: low GI carbs, high fiber", "Brisk walking 30 mins/day, 5 days/week", "Daily foot inspection for micro-trauma"],
-      redFlags: ["Non-healing foot ulcers or sudden loss of sensation", "Persistent nausea, vomiting, or deep labored breathing"],
+      investigations: [
+        "Serum Creatinine, eGFR, Blood Urea",
+        "Spot Urine Albumin-to-Creatinine Ratio (UACR)",
+        "Fundus Examination for Retinopathy",
+      ],
+      advice: [
+        "Diabetic nutrition plan: low GI carbs, high fiber",
+        "Brisk walking 30 mins/day, 5 days/week",
+        "Daily foot inspection for micro-trauma",
+      ],
+      redFlags: [
+        "Non-healing foot ulcers or sudden loss of sensation",
+        "Persistent nausea, vomiting, or deep labored breathing",
+      ],
       confidence: 99.1,
     },
   },
@@ -155,25 +250,65 @@ const CLINICAL_SCENARIOS: ClinicalScenario[] = [
     },
     dialogue: [
       { speaker: "doctor", text: "Namaste. How is little Aarav doing today?" },
-      { speaker: "patient", text: "Doctor, he has had a runny nose and dry barking cough for 3 days. Last night he was wheezing and couldn't sleep." },
-      { speaker: "doctor", text: "Let me listen to his lungs. Chest shows bilateral mild expiratory wheezes, throat is mildly congested, no subcostal retractions. Hydration is adequate." },
-      { speaker: "patient", text: "Is it pneumonia doctor? Should we start an antibiotic?" },
-      { speaker: "doctor", text: "No pneumonia. This is viral reactive airway bronchitis. We do not need antibiotics. We will give Levosalbutamol nebulizer/syrup for the bronchospasm and Paracetamol drops for fever. Steam inhalation twice daily will soothe the airway." },
+      {
+        speaker: "patient",
+        text: "Doctor, he has had a runny nose and dry barking cough for 3 days. Last night he was wheezing and couldn't sleep.",
+      },
+      {
+        speaker: "doctor",
+        text: "Let me listen to his lungs. Chest shows bilateral mild expiratory wheezes, throat is mildly congested, no subcostal retractions. Hydration is adequate.",
+      },
+      {
+        speaker: "patient",
+        text: "Is it pneumonia doctor? Should we start an antibiotic?",
+      },
+      {
+        speaker: "doctor",
+        text: "No pneumonia. This is viral reactive airway bronchitis. We do not need antibiotics. We will give Levosalbutamol nebulizer/syrup for the bronchospasm and Paracetamol drops for fever. Steam inhalation twice daily will soothe the airway.",
+      },
     ],
     extractedNote: {
       chiefComplaint: "Barking cough, nocturnal wheezing, and low-grade fever x 3 days",
-      historyOfPresentIllness: "4yo boy brought by mother with 3-day history of clear rhinorrhea followed by spasmodic dry cough and nocturnal wheezing. No history of foreign body ingestion.",
-      vitals: "Temp: 100.4°F (38°C), RR: 26/min (normal for age), SpO2: 97% on room air, Weight: 16.2 kg",
-      assessment: "1. Acute Viral Bronchitis with Reactive Airway Wheeze\n2. No signs of respiratory distress or consolidation",
+      historyOfPresentIllness:
+        "4yo boy brought by mother with 3-day history of clear rhinorrhea followed by spasmodic dry cough and nocturnal wheezing. No history of foreign body ingestion.",
+      vitals:
+        "Temp: 100.4°F (38°C), RR: 26/min (normal for age), SpO2: 97% on room air, Weight: 16.2 kg",
+      assessment:
+        "1. Acute Viral Bronchitis with Reactive Airway Wheeze\n2. No signs of respiratory distress or consolidation",
       icd10: "J20.8 (Acute Bronchitis) / J45.909 (Unspecified Asthma with Wheezing)",
       prescriptions: [
-        { drug: "Syr. Levosalbutamol", dosage: "2.5 ml", duration: "5 Days", instructions: "2.5 ml TDS (every 8 hours)" },
-        { drug: "Syr. Paracetamol 250mg/5ml", dosage: "3.5 ml", duration: "SOS", instructions: "3.5 ml for fever > 100°F (Max 4 times/day)" },
-        { drug: "Saline Nasal Drops 0.65%", dosage: "2 drops", duration: "5 Days", instructions: "2 drops in each nostril before feeds" },
+        {
+          drug: "Syr. Levosalbutamol",
+          dosage: "2.5 ml",
+          duration: "5 Days",
+          instructions: "2.5 ml TDS (every 8 hours)",
+        },
+        {
+          drug: "Syr. Paracetamol 250mg/5ml",
+          dosage: "3.5 ml",
+          duration: "SOS",
+          instructions: "3.5 ml for fever > 100°F (Max 4 times/day)",
+        },
+        {
+          drug: "Saline Nasal Drops 0.65%",
+          dosage: "2 drops",
+          duration: "5 Days",
+          instructions: "2 drops in each nostril before feeds",
+        },
       ],
-      investigations: ["No imaging or blood work indicated currently", "Observe clinical trajectory over 48 hours"],
-      advice: ["Warm steam inhalation twice daily", "Frequent sips of warm fluids and tender coconut water", "Avoid exposure to dust, aerosol sprays, and incense smoke"],
-      redFlags: ["Tachypnea > 35 breaths/minute or chest wall indrawing", "Lethargy, refusal of liquids, or grunting breathing"],
+      investigations: [
+        "No imaging or blood work indicated currently",
+        "Observe clinical trajectory over 48 hours",
+      ],
+      advice: [
+        "Warm steam inhalation twice daily",
+        "Frequent sips of warm fluids and tender coconut water",
+        "Avoid exposure to dust, aerosol sprays, and incense smoke",
+      ],
+      redFlags: [
+        "Tachypnea > 35 breaths/minute or chest wall indrawing",
+        "Lethargy, refusal of liquids, or grunting breathing",
+      ],
       confidence: 99.6,
     },
   },
@@ -188,26 +323,70 @@ const CLINICAL_SCENARIOS: ClinicalScenario[] = [
       vitals: "BP: 118/76 mmHg · HR: 72 bpm · Neurological exam normal",
     },
     dialogue: [
-      { speaker: "doctor", text: "Hello Deepa. Tell me what's happening with these headaches." },
-      { speaker: "patient", text: "Doctor, 3 to 4 times a month I get this debilitating throbbing pain on the right side of my head. Before it starts, I see shimmering zigzag lights in my vision for about 20 minutes." },
-      { speaker: "doctor", text: "Do you also experience nausea, light sensitivity, or sound intolerance during the attacks?" },
-      { speaker: "patient", text: "Yes, I have to lie down in a completely dark, quiet room. Screen light makes me feel like vomiting." },
-      { speaker: "doctor", text: "This is a classic presentation of Migraine with Aura. We will give you Rizatriptan with Naproxen to abort acute attacks early, and start low-dose Propranolol daily to reduce monthly frequency. Keep a headache trigger diary." },
+      {
+        speaker: "doctor",
+        text: "Hello Deepa. Tell me what's happening with these headaches.",
+      },
+      {
+        speaker: "patient",
+        text: "Doctor, 3 to 4 times a month I get this debilitating throbbing pain on the right side of my head. Before it starts, I see shimmering zigzag lights in my vision for about 20 minutes.",
+      },
+      {
+        speaker: "doctor",
+        text: "Do you also experience nausea, light sensitivity, or sound intolerance during the attacks?",
+      },
+      {
+        speaker: "patient",
+        text: "Yes, I have to lie down in a completely dark, quiet room. Screen light makes me feel like vomiting.",
+      },
+      {
+        speaker: "doctor",
+        text: "This is a classic presentation of Migraine with Aura. We will give you Rizatriptan with Naproxen to abort acute attacks early, and start low-dose Propranolol daily to reduce monthly frequency. Keep a headache trigger diary.",
+      },
     ],
     extractedNote: {
-      chiefComplaint: "Recurrent unilateral throbbing headache with visual aura x 4 months",
-      historyOfPresentIllness: "36F software architect with 3-4 episodes/month of severe hemicranial pulsating headache preceded by 20-min scintillating scotoma. Accompanied by severe photophobia, phonophobia, and nausea.",
-      vitals: "BP: 118/76 mmHg, Cranial nerves II-XII intact, Fundoscopy normal, No focal deficit",
-      assessment: "1. Episodic Migraine with Typical Visual Aura (ICD-10 G43.109)\n2. High disability score (MIDAS Grade III)",
+      chiefComplaint:
+        "Recurrent unilateral throbbing headache with visual aura x 4 months",
+      historyOfPresentIllness:
+        "36F software architect with 3-4 episodes/month of severe hemicranial pulsating headache preceded by 20-min scintillating scotoma. Accompanied by severe photophobia, phonophobia, and nausea.",
+      vitals:
+        "BP: 118/76 mmHg, Cranial nerves II-XII intact, Fundoscopy normal, No focal deficit",
+      assessment:
+        "1. Episodic Migraine with Typical Visual Aura (ICD-10 G43.109)\n2. High disability score (MIDAS Grade III)",
       icd10: "G43.109 (Migraine with aura, not intractable)",
       prescriptions: [
-        { drug: "Tab. Rizatriptan", dosage: "10 mg", duration: "SOS", instructions: "1 tab stat at aura onset; repeat in 2h if needed (Max 2/day)" },
-        { drug: "Tab. Naproxen", dosage: "500 mg", duration: "SOS", instructions: "1 tab with Rizatriptan for synergistic relief" },
-        { drug: "Tab. Propranolol SR", dosage: "40 mg", duration: "60 Days", instructions: "1 tab OD in the morning (Prophylaxis)" },
+        {
+          drug: "Tab. Rizatriptan",
+          dosage: "10 mg",
+          duration: "SOS",
+          instructions: "1 tab stat at aura onset; repeat in 2h if needed (Max 2/day)",
+        },
+        {
+          drug: "Tab. Naproxen",
+          dosage: "500 mg",
+          duration: "SOS",
+          instructions: "1 tab with Rizatriptan for synergistic relief",
+        },
+        {
+          drug: "Tab. Propranolol SR",
+          dosage: "40 mg",
+          duration: "60 Days",
+          instructions: "1 tab OD in the morning (Prophylaxis)",
+        },
       ],
-      investigations: ["Headache diary recording sleep, caffeine, and stress triggers", "MRI Brain not indicated (benign ICHD-3 criteria)"],
-      advice: ["Consistent sleep-wake cycle even on weekends", "Hydration 2.5L daily, avoid skipping meals", "Blue-light filter glasses and hourly screen breaks"],
-      redFlags: ["Sudden 'thunderclap' headache reaching peak in seconds", "Focal neurological deficit lasting > 60 minutes"],
+      investigations: [
+        "Headache diary recording sleep, caffeine, and stress triggers",
+        "MRI Brain not indicated (benign ICHD-3 criteria)",
+      ],
+      advice: [
+        "Consistent sleep-wake cycle even on weekends",
+        "Hydration 2.5L daily, avoid skipping meals",
+        "Blue-light filter glasses and hourly screen breaks",
+      ],
+      redFlags: [
+        "Sudden 'thunderclap' headache reaching peak in seconds",
+        "Focal neurological deficit lasting > 60 minutes",
+      ],
       confidence: 99.5,
     },
   },
@@ -222,26 +401,66 @@ const CLINICAL_SCENARIOS: ClinicalScenario[] = [
       vitals: "BP: 132/84 mmHg · BMI: 29.1 · Bilateral Knee Pain",
     },
     dialogue: [
-      { speaker: "doctor", text: "Good afternoon Mr. Sundaram. How are your knees feeling lately?" },
-      { speaker: "patient", text: "Doctor, climbing stairs is becoming impossible. My right knee makes cracking sounds and swells up by evening after walking." },
-      { speaker: "doctor", text: "On examination, there is crepitus in the right patellofemoral compartment and mild suprapatellar effusion. Range of motion is 0 to 110 degrees with joint line tenderness. Let's do weight-bearing standing AP and lateral X-rays of both knees." },
+      {
+        speaker: "doctor",
+        text: "Good afternoon Mr. Sundaram. How are your knees feeling lately?",
+      },
+      {
+        speaker: "patient",
+        text: "Doctor, climbing stairs is becoming impossible. My right knee makes cracking sounds and swells up by evening after walking.",
+      },
+      {
+        speaker: "doctor",
+        text: "On examination, there is crepitus in the right patellofemoral compartment and mild suprapatellar effusion. Range of motion is 0 to 110 degrees with joint line tenderness. Let's do weight-bearing standing AP and lateral X-rays of both knees.",
+      },
       { speaker: "patient", text: "Do I need immediate surgery, doctor?" },
-      { speaker: "doctor", text: "Not right now. We will manage this conservatively: Aceclofenac with Paracetamol for acute pain flare-ups, Glucosamine sulfate, quadriceps strengthening physiotherapy, and weight management." },
+      {
+        speaker: "doctor",
+        text: "Not right now. We will manage this conservatively: Aceclofenac with Paracetamol for acute pain flare-ups, Glucosamine sulfate, quadriceps strengthening physiotherapy, and weight management.",
+      },
     ],
     extractedNote: {
-      chiefComplaint: "Bilateral knee pain and stiffness (R > L), exacerbated by stairs x 6 months",
-      historyOfPresentIllness: "64M presenting with progressive mechanical knee pain, morning stiffness lasting 15 mins, and audible crepitus with evening swelling after weight-bearing activity.",
+      chiefComplaint:
+        "Bilateral knee pain and stiffness (R > L), exacerbated by stairs x 6 months",
+      historyOfPresentIllness:
+        "64M presenting with progressive mechanical knee pain, morning stiffness lasting 15 mins, and audible crepitus with evening swelling after weight-bearing activity.",
       vitals: "BP: 132/84 mmHg, BMI: 29.1 kg/m², Antalgic gait favoring right lower limb",
-      assessment: "1. Primary Osteoarthritis of Right Knee (Kellgren-Lawrence Grade III)\n2. Mild Right Knee Reactive Synovial Effusion",
+      assessment:
+        "1. Primary Osteoarthritis of Right Knee (Kellgren-Lawrence Grade III)\n2. Mild Right Knee Reactive Synovial Effusion",
       icd10: "M17.11 (Unilateral primary osteoarthritis, right knee)",
       prescriptions: [
-        { drug: "Tab. Aceclofenac + Paracetamol", dosage: "100/325 mg", duration: "7 Days", instructions: "1 tab BD after food (Pain SOS)" },
-        { drug: "Cap. Diacerein + Glucosamine", dosage: "50/750 mg", duration: "90 Days", instructions: "1 cap OD after lunch" },
-        { drug: "Gel. Diclofenac Topical", dosage: "1%", duration: "30 Days", instructions: "Apply locally over right knee TDS without vigorous rubbing" },
+        {
+          drug: "Tab. Aceclofenac + Paracetamol",
+          dosage: "100/325 mg",
+          duration: "7 Days",
+          instructions: "1 tab BD after food (Pain SOS)",
+        },
+        {
+          drug: "Cap. Diacerein + Glucosamine",
+          dosage: "50/750 mg",
+          duration: "90 Days",
+          instructions: "1 cap OD after lunch",
+        },
+        {
+          drug: "Gel. Diclofenac Topical",
+          dosage: "1%",
+          duration: "30 Days",
+          instructions: "Apply locally over right knee TDS without vigorous rubbing",
+        },
       ],
-      investigations: ["Standing Weight-Bearing X-Ray Both Knees (AP + Lateral)", "Serum Uric Acid & ESR"],
-      advice: ["Quadriceps isometric exercises with physical therapist 3x/week", "Avoid cross-legged sitting and deep squatting", "Low-impact pool walking / stationary cycling"],
-      redFlags: ["Sudden inability to bear weight or joint locking", "Erythema, hot joint with high fever (suspect septic arthritis)"],
+      investigations: [
+        "Standing Weight-Bearing X-Ray Both Knees (AP + Lateral)",
+        "Serum Uric Acid & ESR",
+      ],
+      advice: [
+        "Quadriceps isometric exercises with physical therapist 3x/week",
+        "Avoid cross-legged sitting and deep squatting",
+        "Low-impact pool walking / stationary cycling",
+      ],
+      redFlags: [
+        "Sudden inability to bear weight or joint locking",
+        "Erythema, hot joint with high fever (suspect septic arthritis)",
+      ],
       confidence: 99.3,
     },
   },
@@ -256,26 +475,71 @@ const CLINICAL_SCENARIOS: ClinicalScenario[] = [
       vitals: "BP: 138/86 mmHg · HR: 92 bpm · SpO2: 94% on RA · RR: 22/min",
     },
     dialogue: [
-      { speaker: "doctor", text: "Hello Tariq. You mentioned your breathing has worsened over the past week?" },
-      { speaker: "patient", text: "Yes doctor, my chest feels congested with yellowish phlegm in the morning, and I get breathless even walking 100 meters on flat ground." },
-      { speaker: "doctor", text: "Auscultation reveals scattered polyphonic rhonchi throughout both lung fields with prolonged expiratory phase. Peak flow meter reading is 280 L/min. Have you been using your inhaler regularly?" },
-      { speaker: "patient", text: "I stopped it two weeks ago when I was feeling better." },
-      { speaker: "doctor", text: "Never discontinue maintenance inhalers abruptly. We will step up to Budesonide with Formoterol 400mcg DPI twice daily, add N-Acetylcysteine effervescent tablets for mucus clearance, and a 5-day course of Cefuroxime for the purulent sputum. Let's do a repeat Spirometry after 2 weeks." },
+      {
+        speaker: "doctor",
+        text: "Hello Tariq. You mentioned your breathing has worsened over the past week?",
+      },
+      {
+        speaker: "patient",
+        text: "Yes doctor, my chest feels congested with yellowish phlegm in the morning, and I get breathless even walking 100 meters on flat ground.",
+      },
+      {
+        speaker: "doctor",
+        text: "Auscultation reveals scattered polyphonic rhonchi throughout both lung fields with prolonged expiratory phase. Peak flow meter reading is 280 L/min. Have you been using your inhaler regularly?",
+      },
+      {
+        speaker: "patient",
+        text: "I stopped it two weeks ago when I was feeling better.",
+      },
+      {
+        speaker: "doctor",
+        text: "Never discontinue maintenance inhalers abruptly. We will step up to Budesonide with Formoterol 400mcg DPI twice daily, add N-Acetylcysteine effervescent tablets for mucus clearance, and a 5-day course of Cefuroxime for the purulent sputum. Let's do a repeat Spirometry after 2 weeks.",
+      },
     ],
     extractedNote: {
-      chiefComplaint: "Productive cough with yellow sputum and exertional breathlessness x 7 days",
-      historyOfPresentIllness: "52M with known COPD/Asthma overlap presenting with acute infective exacerbation following non-compliance with maintenance inhaled corticosteroids. Decreased exercise tolerance.",
-      vitals: "BP: 138/86 mmHg, HR: 92 bpm, SpO2: 94% on room air, RR: 22/min, PEFR: 280 L/min (predicted 450 L/min)",
-      assessment: "1. Acute Infective Exacerbation of COPD (GOLD Group E)\n2. Airway Mucus Hypersecretion\n3. Inhaler Non-Adherence",
+      chiefComplaint:
+        "Productive cough with yellow sputum and exertional breathlessness x 7 days",
+      historyOfPresentIllness:
+        "52M with known COPD/Asthma overlap presenting with acute infective exacerbation following non-compliance with maintenance inhaled corticosteroids. Decreased exercise tolerance.",
+      vitals:
+        "BP: 138/86 mmHg, HR: 92 bpm, SpO2: 94% on room air, RR: 22/min, PEFR: 280 L/min (predicted 450 L/min)",
+      assessment:
+        "1. Acute Infective Exacerbation of COPD (GOLD Group E)\n2. Airway Mucus Hypersecretion\n3. Inhaler Non-Adherence",
       icd10: "J44.1 (COPD with acute exacerbation) / J45.901 (Asthma with exacerbation)",
       prescriptions: [
-        { drug: "Inhaler Budesonide + Formoterol", dosage: "400/6 mcg", duration: "60 Days", instructions: "1 puff BD via spacer followed by mouth gargle" },
-        { drug: "Tab. N-Acetylcysteine Effervescent", dosage: "600 mg", duration: "10 Days", instructions: "1 tab dissolved in water OD after breakfast" },
-        { drug: "Tab. Cefuroxime Axetil", dosage: "500 mg", duration: "5 Days", instructions: "1 tab BD after meals" },
+        {
+          drug: "Inhaler Budesonide + Formoterol",
+          dosage: "400/6 mcg",
+          duration: "60 Days",
+          instructions: "1 puff BD via spacer followed by mouth gargle",
+        },
+        {
+          drug: "Tab. N-Acetylcysteine Effervescent",
+          dosage: "600 mg",
+          duration: "10 Days",
+          instructions: "1 tab dissolved in water OD after breakfast",
+        },
+        {
+          drug: "Tab. Cefuroxime Axetil",
+          dosage: "500 mg",
+          duration: "5 Days",
+          instructions: "1 tab BD after meals",
+        },
       ],
-      investigations: ["Chest X-Ray PA View (rule out focal consolidation)", "Sputum Routine & Culture Sensitivity", "Post-bronchodilator Spirometry (in 2 weeks)"],
-      advice: ["Demonstrated proper meter-dose inhaler (MDI) technique with spacer", "Annual Influenza and Pneumococcal vaccination", "Immediate smoking cessation counseling"],
-      redFlags: ["Rest dyspnea with SpO2 dropping below 92%", "Confusion, cyanosis, or accessory muscle breathing"],
+      investigations: [
+        "Chest X-Ray PA View (rule out focal consolidation)",
+        "Sputum Routine & Culture Sensitivity",
+        "Post-bronchodilator Spirometry (in 2 weeks)",
+      ],
+      advice: [
+        "Demonstrated proper meter-dose inhaler (MDI) technique with spacer",
+        "Annual Influenza and Pneumococcal vaccination",
+        "Immediate smoking cessation counseling",
+      ],
+      redFlags: [
+        "Rest dyspnea with SpO2 dropping below 92%",
+        "Confusion, cyanosis, or accessory muscle breathing",
+      ],
       confidence: 99.7,
     },
   },
@@ -285,43 +549,55 @@ const VERNACULAR_EXAMPLES = [
   {
     lang: "Hindi & Hinglish",
     flag: "🇮🇳",
-    rawAudio: "Doctor sahab, 3 din se bahut severe headache hai aur ulti jaisa lag raha hai. BP check kar lijiye please.",
-    extracted: "Patient reports severe cephalalgia x 3 days with associated nausea. Requests arterial pressure evaluation.",
+    rawAudio:
+      "Doctor sahab, 3 din se bahut severe headache hai aur ulti jaisa lag raha hai. BP check kar lijiye please.",
+    extracted:
+      "Patient reports severe cephalalgia x 3 days with associated nausea. Requests arterial pressure evaluation.",
     tags: ["Headache (Cephalalgia)", "Nausea", "BP Check"],
   },
   {
     lang: "Tamil & Tanglish",
     flag: "🇮🇳",
-    rawAudio: "Doctor, rendu naala right knee la bayangarama pain. Stairs climb panna mudiyala, swelling irukku.",
-    extracted: "Right knee mechanical arthralgia x 2 days with functional limitation on stairs and localized joint edema.",
+    rawAudio:
+      "Doctor, rendu naala right knee la bayangarama pain. Stairs climb panna mudiyala, swelling irukku.",
+    extracted:
+      "Right knee mechanical arthralgia x 2 days with functional limitation on stairs and localized joint edema.",
     tags: ["Right Knee Arthralgia", "Joint Effusion", "Stair Impairment"],
   },
   {
     lang: "Telugu-English",
     flag: "🇮🇳",
-    rawAudio: "Namaskaram doctor garu, past one week nundi sugar levels chala high unnai, frequent ga thirst and urination vastondi.",
-    extracted: "Presenting with marked osmotic symptoms (polydipsia, polyuria) and uncontrolled glycemic profile x 1 week.",
+    rawAudio:
+      "Namaskaram doctor garu, past one week nundi sugar levels chala high unnai, frequent ga thirst and urination vastondi.",
+    extracted:
+      "Presenting with marked osmotic symptoms (polydipsia, polyuria) and uncontrolled glycemic profile x 1 week.",
     tags: ["Hyperglycemia", "Polydipsia", "Polyuria"],
   },
   {
     lang: "Malayalam-English",
     flag: "🇮🇳",
-    rawAudio: "Doctor, oru aazhchayayi kooduthal chuma undu. Raathriyil breathlessness karanam urangan pattunnilla.",
-    extracted: "Persistent productive cough x 7 days with nocturnal dyspnea and sleep disruption. Reactive airway wheeze.",
+    rawAudio:
+      "Doctor, oru aazhchayayi kooduthal chuma undu. Raathriyil breathlessness karanam urangan pattunnilla.",
+    extracted:
+      "Persistent productive cough x 7 days with nocturnal dyspnea and sleep disruption. Reactive airway wheeze.",
     tags: ["Productive Cough", "Nocturnal Dyspnea", "Sleep Disturbance"],
   },
   {
     lang: "Kannada-English",
     flag: "🇮🇳",
-    rawAudio: "Doctor, 4 days inda thumba chest heaviness ide, walking madidre breathless agutte. Gas problem ankoltiya?",
-    extracted: "Exertional retrosternal heaviness with dyspnea on ambulation x 4 days. Queries dyspepsia vs angina pectoris.",
+    rawAudio:
+      "Doctor, 4 days inda thumba chest heaviness ide, walking madidre breathless agutte. Gas problem ankoltiya?",
+    extracted:
+      "Exertional retrosternal heaviness with dyspnea on ambulation x 4 days. Queries dyspepsia vs angina pectoris.",
     tags: ["Chest Heaviness", "Exertional Dyspnea", "Differential: Angina"],
   },
   {
     lang: "Bengali & Indian English",
     flag: "🇮🇳",
-    rawAudio: "Doctor babu, amar khub gas ebong chest discomfort hocche, especially khawar por shuye thakle.",
-    extracted: "Postprandial retrosternal burning discomfort aggravated in recumbent position. Suggestive of acute GERD.",
+    rawAudio:
+      "Doctor babu, amar khub gas ebong chest discomfort hocche, especially khawar por shuye thakle.",
+    extracted:
+      "Postprandial retrosternal burning discomfort aggravated in recumbent position. Suggestive of acute GERD.",
     tags: ["Postprandial Pyrosis", "Recumbent Dyspepsia", "GERD"],
   },
 ];
@@ -354,7 +630,9 @@ export function LandingPage() {
 
   // Interactive Scenario State
   const [activeScenarioId, setActiveScenarioId] = useState<string>("cardio");
-  const [activeNoteTab, setActiveNoteTab] = useState<"summary" | "rx" | "investigations" | "safety">("summary");
+  const [activeNoteTab, setActiveNoteTab] = useState<
+    "summary" | "rx" | "investigations" | "safety"
+  >("summary");
   const [isPlayingSimulation, setIsPlayingSimulation] = useState<boolean>(false);
   const [activeDialogueIndex, setActiveDialogueIndex] = useState<number>(0);
   const [copiedState, setCopiedState] = useState<boolean>(false);
@@ -371,14 +649,16 @@ export function LandingPage() {
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(0);
 
   const currentScenario = useMemo(
-    () => CLINICAL_SCENARIOS.find((s) => s.id === activeScenarioId) ?? CLINICAL_SCENARIOS[0],
+    () =>
+      CLINICAL_SCENARIOS.find((s) => s.id === activeScenarioId) ?? CLINICAL_SCENARIOS[0],
     [activeScenarioId],
   );
 
   // Dynamic ROI Calculations
   const roiMetrics = useMemo(() => {
     const timeSavedPerPatientMins = Math.max(0, minsPerPatient - 1.4);
-    const weeklyHoursSaved = (patientsPerDay * timeSavedPerPatientMins * workingDaysPerWeek) / 60;
+    const weeklyHoursSaved =
+      (patientsPerDay * timeSavedPerPatientMins * workingDaysPerWeek) / 60;
     const monthlyHoursSaved = weeklyHoursSaved * 4.2;
     const annualHoursSaved = weeklyHoursSaved * 50;
 
@@ -516,6 +796,9 @@ RED FLAGS: ${currentScenario.extractedNote.redFlags.join("; ")}`;
           },
         );
       });
+
+      // Refresh triggers to ensure correct scroll bounds
+      ScrollTrigger.refresh();
     }, root);
 
     return () => ctx.revert();
@@ -537,7 +820,9 @@ RED FLAGS: ${currentScenario.extractedNote.redFlags.join("; ")}`;
       {/* ------------------------------------------------------------- */}
       {/* ROUNDED FLOATING GLASS HEADER NAVBAR WITH BUBBLY BOUNCE       */}
       {/* ------------------------------------------------------------- */}
-      <header className={`mv-navbar-wrapper ${isScrolled ? "mv-navbar-wrapper--scrolled" : ""}`}>
+      <header
+        className={`mv-navbar-wrapper ${isScrolled ? "mv-navbar-wrapper--scrolled" : ""}`}
+      >
         <nav className="mv-navbar" aria-label="Main Navigation">
           <Link className="mv-brand" to="/landing" aria-label="MediVaani Home">
             <BrandMark size={30} className="mv-brand__icon" />
@@ -557,15 +842,17 @@ RED FLAGS: ${currentScenario.extractedNote.redFlags.join("; ")}`;
             <a href="#whatsapp">WhatsApp</a>
             <a href="#security">DPDP Privacy</a>
             <a href="#faq">FAQ</a>
+            <Link to="/contact">Contact Us</Link>
           </div>
 
           <div className="mv-navbar__actions">
-            <Link className="mv-btn mv-btn--ghost" to="/login">
+            <Link className="mv-btn mv-btn--ghost mv-hide-mobile" to="/login">
               Doctor Sign In
             </Link>
             <Link className="mv-btn mv-btn--emerald" to="/login">
-              <span>Start Free Workspace</span>
-              <ArrowRight size={15} />
+              <span className="mv-cta-text--desktop">Start Free Workspace</span>
+              <span className="mv-cta-text--mobile">Start Free</span>
+              <ArrowRight size={14} />
             </Link>
           </div>
         </nav>
@@ -583,7 +870,9 @@ RED FLAGS: ${currentScenario.extractedNote.redFlags.join("; ")}`;
           <div className="mv-hero-content">
             <div className="mv-pill-badge" data-hero-elem>
               <HeartPulse size={14} className="mv-text-amber" />
-              <span>Ambient AI Clinical Documentation for Indian &amp; Global Healthcare</span>
+              <span>
+                Ambient AI Clinical Documentation for Indian &amp; Global Healthcare
+              </span>
             </div>
 
             <h1 className="mv-hero-title" data-hero-elem>
@@ -593,8 +882,9 @@ RED FLAGS: ${currentScenario.extractedNote.redFlags.join("; ")}`;
             </h1>
 
             <p className="mv-hero-desc" data-hero-elem>
-              MediVaani listens naturally during patient consultations, detects Indian languages &amp; accents, and
-              instantly extracts structured, ICD-10 coded clinical SOAP notes into your EMR. Reclaim 2.5 hours every day.
+              MediVaani listens naturally during patient consultations, detects Indian
+              languages &amp; accents, and instantly extracts structured, ICD-10 coded
+              clinical SOAP notes into your EMR. Reclaim 2.5 hours every day.
             </p>
 
             <div className="mv-hero-actions" data-hero-elem>
@@ -675,11 +965,17 @@ RED FLAGS: ${currentScenario.extractedNote.redFlags.join("; ")}`;
                 <div className="mv-mockup-stream-snippet">
                   <div className="mv-stream-speaker mv-stream-speaker--doc">
                     <span className="mv-speaker-tag">Dr. Nair:</span>
-                    <span>"Does the pain radiate to your left shoulder or jaw when climbing stairs?"</span>
+                    <span>
+                      "Does the pain radiate to your left shoulder or jaw when climbing
+                      stairs?"
+                    </span>
                   </div>
                   <div className="mv-stream-speaker mv-stream-speaker--pat">
                     <span className="mv-speaker-tag">Patient:</span>
-                    <span>"Yes doctor, it travels towards my left arm and eases when I rest for 5 minutes."</span>
+                    <span>
+                      "Yes doctor, it travels towards my left arm and eases when I rest
+                      for 5 minutes."
+                    </span>
                   </div>
                 </div>
 
@@ -690,16 +986,21 @@ RED FLAGS: ${currentScenario.extractedNote.redFlags.join("; ")}`;
                     <span className="mv-confidence-pill">99.4% Match</span>
                   </div>
                   <div className="mv-note-preview-text">
-                    <strong>Assessment:</strong> Exertional Angina Pectoris (NYHA Class II) · Stage 2 HTN (ICD-10 I20.9)
+                    <strong>Assessment:</strong> Exertional Angina Pectoris (NYHA Class
+                    II) · Stage 2 HTN (ICD-10 I20.9)
                     <br />
-                    <strong>Rx:</strong> Tab. Telmisartan 40mg (1-0-0), Tab. Atorvastatin 20mg (0-0-1), Tab. Sorbitrate 5mg SOS
+                    <strong>Rx:</strong> Tab. Telmisartan 40mg (1-0-0), Tab. Atorvastatin
+                    20mg (0-0-1), Tab. Sorbitrate 5mg SOS
                   </div>
                 </div>
               </div>
             </div>
 
             {/* Floating Mini Badges */}
-            <div className="mv-hero-badge-float mv-hero-badge-float--1" data-parallax-depth="1.2">
+            <div
+              className="mv-hero-badge-float mv-hero-badge-float--1"
+              data-parallax-depth="1.2"
+            >
               <Clock size={16} className="mv-text-emerald" />
               <div>
                 <b>2.5 Hours</b>
@@ -707,7 +1008,10 @@ RED FLAGS: ${currentScenario.extractedNote.redFlags.join("; ")}`;
               </div>
             </div>
 
-            <div className="mv-hero-badge-float mv-hero-badge-float--2" data-parallax-depth="1.5">
+            <div
+              className="mv-hero-badge-float mv-hero-badge-float--2"
+              data-parallax-depth="1.5"
+            >
               <Zap size={16} className="mv-text-amber" />
               <div>
                 <b>&lt; 3.0s Note Prep</b>
@@ -729,8 +1033,9 @@ RED FLAGS: ${currentScenario.extractedNote.redFlags.join("; ")}`;
           </div>
           <h2>Experience Ambient Medical Intelligence</h2>
           <p>
-            Select a clinical scenario below. Watch natural doctor-patient dialogue transcribe live in the transcript
-            panel and structure simultaneously into the clinical note.
+            Select a clinical scenario below. Watch natural doctor-patient dialogue
+            transcribe live in the transcript panel and structure simultaneously into the
+            clinical note.
           </p>
         </div>
 
@@ -791,22 +1096,24 @@ RED FLAGS: ${currentScenario.extractedNote.redFlags.join("; ")}`;
             </div>
 
             <div className="mv-dialogue-stream">
-              {currentScenario.dialogue.slice(0, activeDialogueIndex + 1).map((turn, i) => (
-                <div
-                  key={i}
-                  className={`mv-dialogue-bubble mv-dialogue-bubble--${turn.speaker} ${
-                    i === activeDialogueIndex ? "mv-dialogue-bubble--active" : ""
-                  }`}
-                >
-                  <div className="mv-bubble-meta">
-                    <span className="mv-bubble-speaker">
-                      {turn.speaker === "doctor" ? "👨‍⚕️ Clinician" : "👤 Patient"}
-                    </span>
-                    <span className="mv-bubble-time">{`00:${(i * 6 + 4).toString().padStart(2, "0")}`}</span>
+              {currentScenario.dialogue
+                .slice(0, activeDialogueIndex + 1)
+                .map((turn, i) => (
+                  <div
+                    key={i}
+                    className={`mv-dialogue-bubble mv-dialogue-bubble--${turn.speaker} ${
+                      i === activeDialogueIndex ? "mv-dialogue-bubble--active" : ""
+                    }`}
+                  >
+                    <div className="mv-bubble-meta">
+                      <span className="mv-bubble-speaker">
+                        {turn.speaker === "doctor" ? "👨‍⚕️ Clinician" : "👤 Patient"}
+                      </span>
+                      <span className="mv-bubble-time">{`00:${(i * 6 + 4).toString().padStart(2, "0")}`}</span>
+                    </div>
+                    <p className="mv-bubble-text">{turn.text}</p>
                   </div>
-                  <p className="mv-bubble-text">{turn.text}</p>
-                </div>
-              ))}
+                ))}
 
               {activeDialogueIndex < currentScenario.dialogue.length - 1 && (
                 <button
@@ -814,7 +1121,10 @@ RED FLAGS: ${currentScenario.extractedNote.redFlags.join("; ")}`;
                   className="mv-btn-next-turn"
                   onClick={() => setActiveDialogueIndex((prev) => prev + 1)}
                 >
-                  <span>Next Speaker Turn ({activeDialogueIndex + 1}/{currentScenario.dialogue.length})</span>
+                  <span>
+                    Next Speaker Turn ({activeDialogueIndex + 1}/
+                    {currentScenario.dialogue.length})
+                  </span>
                   <ArrowRight size={13} />
                 </button>
               )}
@@ -830,9 +1140,14 @@ RED FLAGS: ${currentScenario.extractedNote.redFlags.join("; ")}`;
               </div>
               <div className="mv-note-meta-actions">
                 <span className="mv-confidence-tag">
-                  <CheckCircle2 size={12} /> {currentScenario.extractedNote.confidence}% Confidence
+                  <CheckCircle2 size={12} /> {currentScenario.extractedNote.confidence}%
+                  Confidence
                 </span>
-                <button type="button" className="mv-btn-copy-note" onClick={handleCopyNote}>
+                <button
+                  type="button"
+                  className="mv-btn-copy-note"
+                  onClick={handleCopyNote}
+                >
                   {copiedState ? <Check size={13} /> : <Copy size={13} />}
                   <span>{copiedState ? "Copied!" : "Copy Note"}</span>
                 </button>
@@ -853,7 +1168,8 @@ RED FLAGS: ${currentScenario.extractedNote.redFlags.join("; ")}`;
                 className={`mv-note-tab ${activeNoteTab === "rx" ? "mv-note-tab--active" : ""}`}
                 onClick={() => setActiveNoteTab("rx")}
               >
-                <Pill size={13} /> Prescriptions ({currentScenario.extractedNote.prescriptions.length})
+                <Pill size={13} /> Prescriptions (
+                {currentScenario.extractedNote.prescriptions.length})
               </button>
               <button
                 type="button"
@@ -876,8 +1192,12 @@ RED FLAGS: ${currentScenario.extractedNote.redFlags.join("; ")}`;
                 <div className="mv-soap-sections">
                   <div className="mv-soap-card">
                     <span className="mv-soap-label">SUBJECTIVE / CHIEF COMPLAINT</span>
-                    <p className="mv-soap-text">{currentScenario.extractedNote.chiefComplaint}</p>
-                    <p className="mv-soap-subtext">{currentScenario.extractedNote.historyOfPresentIllness}</p>
+                    <p className="mv-soap-text">
+                      {currentScenario.extractedNote.chiefComplaint}
+                    </p>
+                    <p className="mv-soap-subtext">
+                      {currentScenario.extractedNote.historyOfPresentIllness}
+                    </p>
                   </div>
 
                   <div className="mv-soap-card">
@@ -887,8 +1207,12 @@ RED FLAGS: ${currentScenario.extractedNote.redFlags.join("; ")}`;
 
                   <div className="mv-soap-card">
                     <div className="mv-soap-label-row">
-                      <span className="mv-soap-label">ASSESSMENT &amp; ICD-10 MAPPING</span>
-                      <span className="mv-icd-pill">{currentScenario.extractedNote.icd10}</span>
+                      <span className="mv-soap-label">
+                        ASSESSMENT &amp; ICD-10 MAPPING
+                      </span>
+                      <span className="mv-icd-pill">
+                        {currentScenario.extractedNote.icd10}
+                      </span>
                     </div>
                     <p className="mv-soap-text" style={{ whiteSpace: "pre-line" }}>
                       {currentScenario.extractedNote.assessment}
@@ -963,8 +1287,9 @@ RED FLAGS: ${currentScenario.extractedNote.redFlags.join("; ")}`;
                       <strong>Clinician Oversight &amp; Signature Policy</strong>
                     </div>
                     <p>
-                      MediVaani prepares structured recommendations. Under NMC and DPDP clinical guidelines, all
-                      prescriptions and orders must be verified and signed by the licensed attending physician.
+                      MediVaani prepares structured recommendations. Under NMC and DPDP
+                      clinical guidelines, all prescriptions and orders must be verified
+                      and signed by the licensed attending physician.
                     </p>
                   </div>
                 </div>
@@ -985,9 +1310,10 @@ RED FLAGS: ${currentScenario.extractedNote.redFlags.join("; ")}`;
           </div>
           <h2>Engineered for Multilingual Indian OPD Consultations</h2>
           <p>
-            Indian OPD consultations seamlessly blend languages (Hindi, Hinglish, Tamil, Telugu, Kannada, Malayalam,
-            Bengali, Marathi). MediVaani detects regional dialects and normalizes colloquial symptom descriptions into
-            clean clinical terms.
+            Indian OPD consultations seamlessly blend languages (Hindi, Hinglish, Tamil,
+            Telugu, Kannada, Malayalam, Bengali, Marathi). MediVaani detects regional
+            dialects and normalizes colloquial symptom descriptions into clean clinical
+            terms.
           </p>
         </div>
 
@@ -1012,7 +1338,9 @@ RED FLAGS: ${currentScenario.extractedNote.redFlags.join("; ")}`;
                 <Volume2 size={13} />
                 <span>SPOKEN REGIONAL CONSULTATION</span>
               </div>
-              <p className="mv-raw-text">"{VERNACULAR_EXAMPLES[activeVernacularIndex].rawAudio}"</p>
+              <p className="mv-raw-text">
+                "{VERNACULAR_EXAMPLES[activeVernacularIndex].rawAudio}"
+              </p>
             </div>
 
             <div className="mv-vernacular-arrow">
@@ -1025,7 +1353,9 @@ RED FLAGS: ${currentScenario.extractedNote.redFlags.join("; ")}`;
                 <BadgeCheck size={13} />
                 <span>STANDARDIZED CLINICAL RECORD</span>
               </div>
-              <p className="mv-extracted-text">"{VERNACULAR_EXAMPLES[activeVernacularIndex].extracted}"</p>
+              <p className="mv-extracted-text">
+                "{VERNACULAR_EXAMPLES[activeVernacularIndex].extracted}"
+              </p>
               <div className="mv-extracted-tags">
                 {VERNACULAR_EXAMPLES[activeVernacularIndex].tags.map((tag, i) => (
                   <span key={i} className="mv-tag-chip">
@@ -1049,8 +1379,9 @@ RED FLAGS: ${currentScenario.extractedNote.redFlags.join("; ")}`;
           </div>
           <h2>24/7 AI Voice Agents for Doctor Appointment Booking</h2>
           <p>
-            Never miss a patient call. MediVaani's intelligent voice agents answer incoming calls around the clock, book
-            and reschedule OPD appointments, answer general clinic questions, and drastically cut patient no-shows.
+            Never miss a patient call. MediVaani's intelligent voice agents answer
+            incoming calls around the clock, book and reschedule OPD appointments, answer
+            general clinic questions, and drastically cut patient no-shows.
           </p>
         </div>
 
@@ -1061,8 +1392,8 @@ RED FLAGS: ${currentScenario.extractedNote.redFlags.join("; ")}`;
             </div>
             <h3>24/7 Inbound Call Reception</h3>
             <p>
-              Handles simultaneous patient phone calls with natural, polite human-like speech in English, Hindi, and
-              regional Indian languages.
+              Handles simultaneous patient phone calls with natural, polite human-like
+              speech in English, Hindi, and regional Indian languages.
             </p>
           </div>
 
@@ -1072,8 +1403,8 @@ RED FLAGS: ${currentScenario.extractedNote.redFlags.join("; ")}`;
             </div>
             <h3>Smart Slot Booking &amp; Rescheduling</h3>
             <p>
-              Directly checks doctor availability in real-time, books slots, sends instant confirmations, and manages
-              cancellations.
+              Directly checks doctor availability in real-time, books slots, sends instant
+              confirmations, and manages cancellations.
             </p>
           </div>
 
@@ -1083,8 +1414,8 @@ RED FLAGS: ${currentScenario.extractedNote.redFlags.join("; ")}`;
             </div>
             <h3>68% Reduction in Patient No-Shows</h3>
             <p>
-              Automated proactive reminder phone calls confirm attendance 24 hours in advance, freeing up empty OPD slots
-              for waiting patients.
+              Automated proactive reminder phone calls confirm attendance 24 hours in
+              advance, freeing up empty OPD slots for waiting patients.
             </p>
           </div>
 
@@ -1094,8 +1425,8 @@ RED FLAGS: ${currentScenario.extractedNote.redFlags.join("; ")}`;
             </div>
             <h3>Save 15+ Staff Hours Weekly</h3>
             <p>
-              Eliminate phone queues and administrative bottlenecks. Your front desk staff can focus entirely on
-              in-person patient care.
+              Eliminate phone queues and administrative bottlenecks. Your front desk staff
+              can focus entirely on in-person patient care.
             </p>
           </div>
         </div>
@@ -1112,8 +1443,9 @@ RED FLAGS: ${currentScenario.extractedNote.redFlags.join("; ")}`;
           </div>
           <h2>Instant WhatsApp Clinic Automation</h2>
           <p>
-            Deliver digital prescriptions, appointment confirmations, lab instructions, and follow-up reminders
-            directly to the patient's WhatsApp immediately after consultation sign-off.
+            Deliver digital prescriptions, appointment confirmations, lab instructions,
+            and follow-up reminders directly to the patient's WhatsApp immediately after
+            consultation sign-off.
           </p>
         </div>
 
@@ -1134,7 +1466,8 @@ RED FLAGS: ${currentScenario.extractedNote.redFlags.join("; ")}`;
                 <p>
                   <strong>Namaste Ramesh ji,</strong>
                   <br />
-                  Here is your finalized digital prescription from <strong>Dr. Nair (Cardiology)</strong>.
+                  Here is your finalized digital prescription from{" "}
+                  <strong>Dr. Nair (Cardiology)</strong>.
                 </p>
                 <div className="mv-wa-rx-attachment">
                   <FileCheck2 size={24} className="mv-text-emerald" />
@@ -1148,7 +1481,8 @@ RED FLAGS: ${currentScenario.extractedNote.redFlags.join("; ")}`;
 
               <div className="mv-wa-bubble">
                 <p>
-                  📅 <strong>Follow-up Scheduled:</strong> 15 Days (2D ECHO &amp; Lipid Profile Review).
+                  📅 <strong>Follow-up Scheduled:</strong> 15 Days (2D ECHO &amp; Lipid
+                  Profile Review).
                   <br />
                   Reply <em>"RESCHEDULE"</em> anytime to modify your slot.
                 </p>
@@ -1170,8 +1504,8 @@ RED FLAGS: ${currentScenario.extractedNote.redFlags.join("; ")}`;
           </div>
           <h2>Zero Friction. Built for High-Volume OPD Practices.</h2>
           <p>
-            From the moment you start the consultation to the final signed prescription in your EMR, MediVaani runs
-            silently in the background.
+            From the moment you start the consultation to the final signed prescription in
+            your EMR, MediVaani runs silently in the background.
           </p>
         </div>
 
@@ -1183,7 +1517,8 @@ RED FLAGS: ${currentScenario.extractedNote.redFlags.join("; ")}`;
             </div>
             <h3>Ambient Room Capture</h3>
             <p>
-              Open MediVaani on any phone, tablet, or desktop. Speak naturally with the patient without looking at a screen.
+              Open MediVaani on any phone, tablet, or desktop. Speak naturally with the
+              patient without looking at a screen.
             </p>
           </div>
 
@@ -1194,7 +1529,8 @@ RED FLAGS: ${currentScenario.extractedNote.redFlags.join("; ")}`;
             </div>
             <h3>Acoustic Diarization</h3>
             <p>
-              Advanced neural speech isolation separates doctor and patient voices while filtering clinical background noise.
+              Advanced neural speech isolation separates doctor and patient voices while
+              filtering clinical background noise.
             </p>
           </div>
 
@@ -1205,7 +1541,8 @@ RED FLAGS: ${currentScenario.extractedNote.redFlags.join("; ")}`;
             </div>
             <h3>Clinical Note Extraction</h3>
             <p>
-              Extracts chief complaints, vitals, dosages, ICD-10 suggestions, and lifestyle advice in under 3 seconds.
+              Extracts chief complaints, vitals, dosages, ICD-10 suggestions, and
+              lifestyle advice in under 3 seconds.
             </p>
           </div>
 
@@ -1216,7 +1553,8 @@ RED FLAGS: ${currentScenario.extractedNote.redFlags.join("; ")}`;
             </div>
             <h3>Doctor Review &amp; Sign-off</h3>
             <p>
-              Review the structured draft, make quick inline edits with automatic version history, and sign off into your EMR.
+              Review the structured draft, make quick inline edits with automatic version
+              history, and sign off into your EMR.
             </p>
           </div>
         </div>
@@ -1233,7 +1571,8 @@ RED FLAGS: ${currentScenario.extractedNote.redFlags.join("; ")}`;
           </div>
           <h2>Reclaim 2+ Hours of Free Time Every Single Day</h2>
           <p>
-            Adjust your daily patient load and charting habits to see the exact time you will reclaim with MediVaani AI.
+            Adjust your daily patient load and charting habits to see the exact time you
+            will reclaim with MediVaani AI.
           </p>
         </div>
 
@@ -1347,8 +1686,8 @@ RED FLAGS: ${currentScenario.extractedNote.redFlags.join("; ")}`;
           </div>
           <h2>Engineered with Strict Clinical Data Privacy</h2>
           <p>
-            Patient trust is paramount. MediVaani is aligned with India's Digital Personal Data Protection (DPDP) Act
-            2023 and modern data security standards.
+            Patient trust is paramount. MediVaani is aligned with India's Digital Personal
+            Data Protection (DPDP) Act 2023 and modern data security standards.
           </p>
         </div>
 
@@ -1359,8 +1698,8 @@ RED FLAGS: ${currentScenario.extractedNote.redFlags.join("; ")}`;
             </div>
             <h3>Zero Model Training on Patient Data</h3>
             <p>
-              Your clinical dialogues and patient notes are NEVER used to train generalized foundation models. Your clinic
-              data remains strictly yours.
+              Your clinical dialogues and patient notes are NEVER used to train
+              generalized foundation models. Your clinic data remains strictly yours.
             </p>
           </div>
 
@@ -1370,8 +1709,8 @@ RED FLAGS: ${currentScenario.extractedNote.redFlags.join("; ")}`;
             </div>
             <h3>In-Country Data Residency</h3>
             <p>
-              All processing happens on sovereign in-country cloud data centers with AES-256 encryption at rest and TLS
-              1.3 in transit.
+              All processing happens on sovereign in-country cloud data centers with
+              AES-256 encryption at rest and TLS 1.3 in transit.
             </p>
           </div>
 
@@ -1381,8 +1720,8 @@ RED FLAGS: ${currentScenario.extractedNote.redFlags.join("; ")}`;
             </div>
             <h3>DPDP 2023 Explicit Consent</h3>
             <p>
-              One-tap digital consent logging built right into the patient intake flow. Fully audit-logged and
-              cryptographically timestamped.
+              One-tap digital consent logging built right into the patient intake flow.
+              Fully audit-logged and cryptographically timestamped.
             </p>
           </div>
 
@@ -1395,8 +1734,8 @@ RED FLAGS: ${currentScenario.extractedNote.redFlags.join("; ")}`;
               <span className="mv-badge-coming-soon">Coming Soon</span>
             </div>
             <p>
-              Upcoming interoperability with Ayushman Bharat Digital Mission (ABDM) Health ID, FHIR clinical bundles, and
-              standardized health records.
+              Upcoming interoperability with Ayushman Bharat Digital Mission (ABDM) Health
+              ID, FHIR clinical bundles, and standardized health records.
             </p>
           </div>
         </div>
@@ -1412,14 +1751,20 @@ RED FLAGS: ${currentScenario.extractedNote.redFlags.join("; ")}`;
             <span>FREQUENT QUESTIONS</span>
           </div>
           <h2>Frequently Asked Questions</h2>
-          <p>Everything you need to know about getting started with MediVaani AI in your practice.</p>
+          <p>
+            Everything you need to know about getting started with MediVaani AI in your
+            practice.
+          </p>
         </div>
 
         <div className="mv-faq-accordion">
           {FAQS.map((faq, idx) => {
             const isOpen = openFaqIndex === idx;
             return (
-              <div key={idx} className={`mv-faq-item ${isOpen ? "mv-faq-item--open" : ""}`}>
+              <div
+                key={idx}
+                className={`mv-faq-item ${isOpen ? "mv-faq-item--open" : ""}`}
+              >
                 <button
                   type="button"
                   className="mv-faq-trigger"
@@ -1441,6 +1786,52 @@ RED FLAGS: ${currentScenario.extractedNote.redFlags.join("; ")}`;
       </section>
 
       {/* ------------------------------------------------------------- */}
+      {/* CONTACT & CLINICAL ASSISTANCE SECTION                         */}
+      {/* ------------------------------------------------------------- */}
+      <section className="mv-contact-section" id="contact" data-reveal>
+        <div className="mv-section-header">
+          <div className="mv-section-tag">
+            <Headphones size={14} />
+            <span>CONTACT &amp; CLINICAL SUPPORT</span>
+          </div>
+          <h2>We Are Here to Assist Your Practice</h2>
+          <p>
+            Have questions about clinic deployment, technical integration, or voice
+            agents? Reach out directly to our engineering and clinical integration team.
+          </p>
+        </div>
+
+        <div className="mv-contact-container">
+          <div className="mv-contact-card-main">
+            <div className="mv-contact-mail-orb">
+              <Mail size={28} />
+            </div>
+            <h3>Email Our Lead Clinical Team Directly</h3>
+            <p className="mv-contact-email-val">revanth.sharma5198@gmail.com</p>
+            <p className="mv-contact-sub">
+              Available 24/7 for doctor onboarding, technical inquiries, and ABDM/EMR
+              custom integration support.
+            </p>
+
+            <div className="mv-contact-actions">
+              <a
+                href="mailto:revanth.sharma5198@gmail.com?subject=MediVaani%20Inquiry"
+                className="mv-btn mv-btn--primary-hero"
+              >
+                <Mail size={16} />
+                <span>Send Email to Team</span>
+                <ArrowRight size={15} />
+              </a>
+              <Link to="/contact" className="mv-btn mv-btn--outline-hero">
+                <MessageSquare size={16} />
+                <span>Open Contact &amp; Support Page</span>
+              </Link>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ------------------------------------------------------------- */}
       {/* BOTTOM MEGA CALL-TO-ACTION                                    */}
       {/* ------------------------------------------------------------- */}
       <section className="mv-bottom-cta-section" data-reveal>
@@ -1453,8 +1844,8 @@ RED FLAGS: ${currentScenario.extractedNote.redFlags.join("; ")}`;
 
           <h2>Start Your Free MediVaani Workspace</h2>
           <p>
-            Experience ambient AI documentation on your next patient. Setup takes less than 60 seconds with no credit
-            card required.
+            Experience ambient AI documentation on your next patient. Setup takes less
+            than 60 seconds with no credit card required.
           </p>
 
           <div className="mv-cta-buttons">
@@ -1469,7 +1860,10 @@ RED FLAGS: ${currentScenario.extractedNote.redFlags.join("; ")}`;
           </div>
 
           <div className="mv-cta-foot-note">
-            <span>✨ No specialized hardware required · Works on iOS, Android, macOS &amp; Windows</span>
+            <span>
+              ✨ No specialized hardware required · Works on iOS, Android, macOS &amp;
+              Windows
+            </span>
           </div>
         </div>
       </section>
@@ -1487,8 +1881,8 @@ RED FLAGS: ${currentScenario.extractedNote.redFlags.join("; ")}`;
               </span>
             </div>
             <p>
-              Ambient AI clinical intelligence for modern doctors. Powered by advanced multilingual acoustic speech
-              recognition and clinical structuring.
+              Ambient AI clinical intelligence for modern doctors. Powered by advanced
+              multilingual acoustic speech recognition and clinical structuring.
             </p>
           </div>
 
@@ -1510,16 +1904,22 @@ RED FLAGS: ${currentScenario.extractedNote.redFlags.join("; ")}`;
             </div>
 
             <div className="mv-footer-col">
-              <h4>Clinicians</h4>
+              <h4>Support &amp; Contact</h4>
+              <Link to="/contact">Contact Support Desk</Link>
+              <a href="mailto:revanth.sharma5198@gmail.com">
+                revanth.sharma5198@gmail.com
+              </a>
               <Link to="/login">Doctor Sign In</Link>
-              <Link to="/login">Clinic Onboarding</Link>
               <a href="#faq">Support FAQ</a>
             </div>
           </div>
         </div>
 
         <div className="mv-footer-bottom">
-          <p>© {new Date().getFullYear()} MediVaani AI. Built for clinicians with precision and care.</p>
+          <p>
+            © {new Date().getFullYear()} MediVaani AI. Built for clinicians with precision
+            and care.
+          </p>
           <div className="mv-footer-badges">
             <span>DPDP 2023 Aligned</span>
             <span>Data Encryption Active</span>
@@ -1527,6 +1927,18 @@ RED FLAGS: ${currentScenario.extractedNote.redFlags.join("; ")}`;
           </div>
         </div>
       </footer>
+
+      {/* Mobile-Only Sticky Floating Bottom Bar */}
+      <nav className="mv-mobile-bottom-bar" aria-label="Mobile Quick Actions">
+        <Link className="mv-btn mv-btn--ghost-mobile" to="/login">
+          Doctor Sign In
+        </Link>
+        <Link className="mv-btn mv-btn--emerald-mobile" to="/login">
+          <Mic size={15} />
+          <span>Start Consultation</span>
+          <ArrowRight size={14} />
+        </Link>
+      </nav>
     </main>
   );
 }

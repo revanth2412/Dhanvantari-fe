@@ -5,7 +5,13 @@
     "module": "ESNext",
     "moduleResolution": "bundler",
     "allowSyntheticDefaultImports": true,
-    "strict": true
+    "strict": true,
+    /* A referenced project must emit, so send the output somewhere harmless.
+       Left at the default, `tsc -b` writes vite.config.js next to
+       vite.config.ts — and Vite loads the .js first, so a stale copy would
+       silently shadow the real config. */
+    "outDir": "./node_modules/.tmp/tsconfig-node",
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig-node/.tsbuildinfo"
   },
   "include": ["vite.config.ts"]
 }

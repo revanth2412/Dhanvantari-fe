@@ -19,6 +19,7 @@ import { Button } from "@/components/ui/Button";
 import { Drawer, Modal } from "@/components/ui/Modal";
 import { EcgLoader } from "@/components/ui/EcgLoader";
 import { CaptureStage } from "@/components/consultation/CaptureStage";
+import { ConsultationProvenance } from "@/components/consultation/ConsultationProvenance";
 import { PipelineStatus } from "@/components/consultation/PipelineStatus";
 import { NotePanel } from "@/components/note/NotePanel";
 import { TranscriptPanel } from "@/components/consultation/TranscriptPanel";
@@ -229,6 +230,7 @@ export function ConsultationSessionPage() {
             <Button
               variant="danger-soft"
               size="sm"
+              className="session-head__discard"
               onClick={() => setDiscardOpen(true)}
               title="Discard this consultation"
             >
@@ -236,6 +238,15 @@ export function ConsultationSessionPage() {
             </Button>
           )}
         </div>
+      )}
+
+      {/* Provenance rides along outside review mode too — the note panel
+          renders its own copy once the record exists. */}
+      {!showReview && (
+        <ConsultationProvenance
+          consultation={consultation}
+          className="prov--standalone"
+        />
       )}
 
       {isDiscarded && (

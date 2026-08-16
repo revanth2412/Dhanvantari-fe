@@ -76,8 +76,15 @@ src/
     recorder/AudioRecorder.tsx       # MediaRecorder + live canvas waveform + pause/resume
     consultation/           # CaptureStage (record|upload tabs), PipelineStatus (4-step
                             #   animated stepper), TranscriptPanel (diarized segments)
-    note/NotePanel.tsx      # clinical note: view sections, inline edit -> PUT new version,
-                            #   finalize modal, confidence ring, copy-as-text
+    note/                   # clinical note, split so BOTH renderings share one editor set:
+      NotePanel.tsx         #   toolbar (identity, view switch, ops, primary actions) +
+                            #   the 12-column grid view; owns record state + save/finalize
+      SoapNoteView.tsx      #   S/O/A/P tabbed rendering; mounts the same editors
+      NoteEditors.tsx       #   one editor per field group (symptoms, vitals, diagnosis,
+                            #   prescriptions, follow-up, history, social, identity)
+      NoteBits.tsx          #   presentational atoms: NSec, IRow, ChipList/ChipEditor,
+                            #   ConfidenceRing, VitalIcon
+      noteModel.ts          #   normalize(), noteHas(), patcher types — no JSX
   pages/ClinicPage.tsx      # clinic details/edit, invite code, member list, create-or-join
   pages/                    # one screen each: Login (split hero), RegisterProfile (wizard),
                             #   PendingApproval (auto-poll), Dashboard, Patients,
@@ -111,6 +118,18 @@ src/
   it — it silently no-ops on desktop and iOS Safari.
 - **Scroll containers**: don't add `overscroll-behavior: contain` to anything that
   isn't always scrollable — it swallows the wheel and freezes the page scroll.
+- **Never `overflow-x: hidden` on an ancestor** (html, body, `.page`, a card…).
+  `hidden` makes the element a scroll container, and every `position: sticky`
+  inside it stops sticking. Use `overflow-x: hidden; overflow-x: clip;` — the
+  first line is the fallback, the second is what modern engines apply.
+- **Rows of controls on a phone**: a toolbar that fits on a desktop will run off
+  the side of a 375px screen. Either let the row become a full-width stack, or
+  give the primary actions a docked bar (see `.note-actionbar`: sticky, offset by
+  `--tabbar-h + --safe-bottom` so it clears the floating tab bar). Duplicating a
+  control and letting CSS choose which copy is visible is the established pattern
+  here — the sidebar and the tab bar already work that way.
+- **Editor rows**: repeating field editors use `.nedit` / `.nedit__fields`, whose
+  `auto-fit` track collapses to one column on a phone with no media query.
 
 ## Coding conventions (follow these)
 - **Layering:** components/pages → hooks/context → services → lib. Components must
@@ -125,6 +144,45 @@ src/
   `apiRequest<T>()`. Don't inline URLs in components.
 - **Keep it green:** `npm run build` (tsc + vite) and `npm run lint` must pass
   with zero errors/warnings before considering a change done.
+
+## Dashboard metrics (don't invent numbers)
+Every card on the doctor dashboard is backed by `GET /stats/me`, which the
+backend scopes to `Consultation.doctor_id == current doctor`. Rules:
+- **Never** fall back to a clinic-wide number (e.g. the patient roster length)
+  when the doctor-scoped stat hasn't loaded — render `—` (`.db-bento-pending`).
+- **Patients in care** = `patients_seen` (distinct patients with a non-discarded
+  consultation by this doctor), not the size of the patient list.
+- **Time reclaimed** is an estimate and is labelled `EST.`: it multiplies
+  `finalized + draft_ready` (notes the scribe actually produced — failed and
+  in-flight consultations produced nothing) by `MINUTES_SAVED_PER_NOTE`, and
+  the card states the per-note assumption. No floor, no fabricated baseline.
+- The **sessions queue** is `lib/recents.ts` — the last 12 sessions from *this
+  browser*, because the backend still has no list-consultations endpoint. The
+  queue carries a footnote saying so; don't present its counts as totals.
+
+## Patient visibility (roster vs clinic directory)
+The backend widens `GET /patients` to the whole clinic for a **clinic admin**
+(`app/scoping.py`). The UI deliberately does not follow that everywhere:
+- **Patients page + dashboard roster** stay personal for everyone, including a
+  clinic admin — `useMyPatients()` intersects the returned list with the
+  patients that admin has actually consulted (patient ids from
+  `GET /clinics/me/consultations`). It never falls back to the clinic-wide list
+  while the log is loading, and the page links to the clinic directory rather
+  than hiding colleagues' patients silently.
+- **Clinic page** carries the full directory with complete detail (contact,
+  language, do-not-call, registration date, consultation count, last visit, and
+  which doctors saw them) — clinic admin only, since the endpoints 403 otherwise.
+
+## Consultation provenance
+`components/consultation/ConsultationProvenance.tsx` shows who conducted the
+visit and who signed the note off. Names come from:
+- **Conducted by** — `consultation.doctor_id`, resolved via
+  `useClinicDirectory()`. `GET /clinics/me/members` is clinic-admin only, which
+  matches the scoping: a regular doctor only ever sees their own consultations,
+  so the only id they resolve is their own.
+- **Signed off by** — `record.reviewed_by` + `finalized_at`. `reviewed_by` is
+  also written on every save, so on a draft it means *last edited by* — the
+  component labels it that way rather than implying a signature.
 
 ## Auth model (important)
 `AuthProvider` computes a single `AuthStatus` used for all routing:
@@ -209,8 +267,31 @@ come from `lib/recents.ts` (localStorage).
 ## Commands
 - `npm run dev` — dev server on :5173
 - `npm run build` — `tsc -b && vite build`
+- `npm run preview` — serves `dist/` on :4173 (the only way to test the
+  obfuscated production output; dev builds skip that step entirely)
 - `npm run lint` — eslint, 0 warnings allowed
 - `npm run format` — prettier
+
+## Production build (vite.config.ts)
+- **Every route is lazy.** The entry chunk is the shell + auth bootstrap +
+  router; each page brings its own icons, and `landing.css` is imported by
+  `LandingPage` so the marketing styles never load for a doctor.
+- **Vendor split** by library (`react`, `supabase`, `gsap`, `vendor`) so a
+  release doesn't evict them from the browser cache. `lucide-react` is
+  deliberately NOT grouped — one icon chunk would drag every icon in the app
+  into the first paint.
+- **Filenames are hashes only** (`assets/[hash].js`), so the bundle stops
+  advertising the page/component structure.
+- **Obfuscation** (`medivaani:obfuscate-app-chunks`) runs on app chunks in
+  `generateBundle`. Two ways to get this wrong, both already tried:
+  obfuscating *source* rewrites `import("…")` specifiers so Rollup can't follow
+  them and route splitting collapses to one chunk; obfuscating in `renderChunk`
+  hides Rollup's `!~{007}~` placeholders inside the encoded string array, so
+  every lazy route 404s. Vendor chunks are skipped.
+- **Terser** mangles top-level names, strips comments, and drops
+  `console.log/info/debug` — `console.warn`/`error` survive on purpose.
+- After changing any of this, run `npm run build && npm run preview` and load a
+  lazy route; a broken module graph only shows up at runtime.
 
 ## Implemented vs TODO
 Implemented: auth (email/password + Google), onboarding wizard, approval gating

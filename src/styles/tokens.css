@@ -68,7 +68,8 @@
   --ok-soft: var(--green-50);
 
   /* ---- Typography ---- */
-  --font-body: "Plus Jakarta Sans", "Instrument Sans", -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-body:
+    "Plus Jakarta Sans", "Instrument Sans", -apple-system, BlinkMacSystemFont, sans-serif;
   --font-display: "Bricolage Grotesque", "Plus Jakarta Sans", sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, "Cascadia Code", monospace;
 
@@ -82,14 +83,41 @@
 
   /* ---- Gradients & Lights ---- */
   --grad-brand: linear-gradient(135deg, #0d382c 0%, #159577 55%, #20c997 100%);
-  --grad-brand-deep: linear-gradient(160deg, #040e0b 0%, #071e17 35%, #0a2d23 70%, #0d3b2e 100%);
-  --grad-cockpit: linear-gradient(145deg, rgba(10, 37, 29, 0.95) 0%, rgba(4, 14, 11, 0.98) 100%);
+  --grad-brand-deep: linear-gradient(
+    160deg,
+    #040e0b 0%,
+    #071e17 35%,
+    #0a2d23 70%,
+    #0d3b2e 100%
+  );
+  --grad-cockpit: linear-gradient(
+    145deg,
+    rgba(10, 37, 29, 0.95) 0%,
+    rgba(4, 14, 11, 0.98) 100%
+  );
   --grad-accent: linear-gradient(135deg, #e89524 0%, #f5b14c 100%);
-  --grad-accent-glow: linear-gradient(135deg, rgba(232, 149, 36, 0.25), rgba(245, 177, 76, 0.05));
+  --grad-accent-glow: linear-gradient(
+    135deg,
+    rgba(232, 149, 36, 0.25),
+    rgba(245, 177, 76, 0.05)
+  );
   --grad-text: linear-gradient(100deg, #5fe0bc 0%, #20c997 45%, #f5b14c 100%);
-  --grad-dark-card: linear-gradient(145deg, rgba(10, 35, 28, 0.88) 0%, rgba(4, 14, 11, 0.96) 100%);
-  --grad-emerald-subtle: radial-gradient(circle at 50% 0%, rgba(32, 201, 151, 0.22), transparent 70%);
-  --grad-hero-radial: radial-gradient(circle at 80% 20%, rgba(95, 224, 188, 0.15) 0%, rgba(232, 149, 36, 0.08) 35%, transparent 70%);
+  --grad-dark-card: linear-gradient(
+    145deg,
+    rgba(10, 35, 28, 0.88) 0%,
+    rgba(4, 14, 11, 0.96) 100%
+  );
+  --grad-emerald-subtle: radial-gradient(
+    circle at 50% 0%,
+    rgba(32, 201, 151, 0.22),
+    transparent 70%
+  );
+  --grad-hero-radial: radial-gradient(
+    circle at 80% 20%,
+    rgba(95, 224, 188, 0.15) 0%,
+    rgba(232, 149, 36, 0.08) 35%,
+    transparent 70%
+  );
 
   /* ---- Shape ---- */
   --r-xs: 6px;
@@ -102,8 +130,10 @@
 
   /* ---- Elevation & Shadows ---- */
   --shadow-1: 0 1px 3px rgba(10, 30, 24, 0.05), 0 1px 2px rgba(10, 30, 24, 0.03);
-  --shadow-2: 0 4px 12px -2px rgba(10, 30, 24, 0.08), 0 2px 4px -1px rgba(10, 30, 24, 0.04);
-  --shadow-3: 0 12px 32px -8px rgba(10, 30, 24, 0.12), 0 4px 12px -2px rgba(10, 30, 24, 0.06);
+  --shadow-2:
+    0 4px 12px -2px rgba(10, 30, 24, 0.08), 0 2px 4px -1px rgba(10, 30, 24, 0.04);
+  --shadow-3:
+    0 12px 32px -8px rgba(10, 30, 24, 0.12), 0 4px 12px -2px rgba(10, 30, 24, 0.06);
   --shadow-4: 0 24px 60px -12px rgba(4, 14, 11, 0.22);
   --shadow-glow: 0 0 45px -10px rgba(32, 201, 151, 0.35);
   --shadow-amber-glow: 0 0 40px -10px rgba(232, 149, 36, 0.35);

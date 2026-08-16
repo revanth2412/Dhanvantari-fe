@@ -23,3 +23,9 @@ Thumbs.db
 .idea/
 .vscode/
 *.local
+
+# Emitted by `tsc -b` from vite.config.ts — never committed, and Vite would
+# load a stale copy of it in preference to the TypeScript source.
+vite.config.js
+vite.config.d.ts
+*.tsbuildinfo

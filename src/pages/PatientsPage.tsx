@@ -23,6 +23,7 @@ import { PatientFormDrawer } from "@/components/patients/PatientFormDrawer";
 import { useAuth } from "@/hooks/useAuth";
 import { useCachedQuery } from "@/hooks/useCachedQuery";
 import { useDebounce } from "@/hooks/useDebounce";
+import { useMyPatients } from "@/hooks/useMyPatients";
 
 export function PatientsPage() {
   const navigate = useNavigate();
@@ -32,17 +33,23 @@ export function PatientsPage() {
   const [query, setQuery] = useState("");
   const debouncedQuery = useDebounce(query, 260);
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [filterGender, setFilterGender] = useState<"all" | "male" | "female" | "elderly">("all");
+  const [filterGender, setFilterGender] = useState<"all" | "male" | "female" | "elderly">(
+    "all",
+  );
 
   // Cached query
   const { data, loading } = useCachedQuery<Patient[]>(
     `patients:list:${debouncedQuery.trim()}`,
     () => searchPatients(debouncedQuery),
   );
-  
-  const allPatients = useMemo(() => {
+
+  const fetched = useMemo(() => {
     return loading ? null : (data ?? []);
   }, [loading, data]);
+
+  // This roster is the doctor's own, even for a clinic admin — the clinic-wide
+  // directory lives on the clinic page.
+  const { patients: allPatients, narrowed, hiddenCount } = useMyPatients(fetched);
 
   // Filtered patients
   const filteredPatients = useMemo(() => {
@@ -50,9 +57,13 @@ export function PatientsPage() {
     let list = allPatients;
 
     if (filterGender === "male") {
-      list = list.filter((p) => p.gender?.toLowerCase() === "male" || p.gender?.toLowerCase() === "m");
+      list = list.filter(
+        (p) => p.gender?.toLowerCase() === "male" || p.gender?.toLowerCase() === "m",
+      );
     } else if (filterGender === "female") {
-      list = list.filter((p) => p.gender?.toLowerCase() === "female" || p.gender?.toLowerCase() === "f");
+      list = list.filter(
+        (p) => p.gender?.toLowerCase() === "female" || p.gender?.toLowerCase() === "f",
+      );
     } else if (filterGender === "elderly") {
       list = list.filter((p) => {
         const age = p.dob ? parseInt(ageFromDob(p.dob) || "0", 10) : 0;
@@ -66,7 +77,12 @@ export function PatientsPage() {
   // GSAP animation
   useEffect(() => {
     const root = rootRef.current;
-    if (!root || !filteredPatients || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    if (
+      !root ||
+      !filteredPatients ||
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    )
+      return;
 
     gsap.fromTo(
       "[data-patient-row]",
@@ -101,12 +117,28 @@ export function PatientsPage() {
           <p className="pts-subtitle">
             {doctor?.clinic_name ? (
               <>
-                Registered patients at <strong>{doctor.clinic_name}</strong>. Search, initiate ambient consultations, or review clinical histories.
+                Patients you have consulted at <strong>{doctor.clinic_name}</strong>.
+                Search, initiate ambient consultations, or review clinical histories.
               </>
             ) : (
               "Search clinical records, launch consultations, or register new patients."
             )}
           </p>
+          {/* A clinic admin's roster stays personal; point them at the full
+              directory rather than silently hiding colleagues' patients. */}
+          {narrowed && hiddenCount > 0 && (
+            <p className="pts-scope-note">
+              <UsersRound size={12} />
+              <span>
+                {hiddenCount} more patient{hiddenCount === 1 ? "" : "s"} in this clinic
+                were seen by colleagues —{" "}
+                <button type="button" onClick={() => navigate("/clinic")}>
+                  view the clinic directory
+                </button>
+                .
+              </span>
+            </p>
+          )}
         </div>
 
         <div className="pts-header__actions">
@@ -178,11 +210,13 @@ export function PatientsPage() {
         ) : filteredPatients.length === 0 ? (
           <EmptyState
             icon={<Users size={28} />}
-            title={query ? "No patients match your search" : "No patients found"}
+            title={query ? "No patients match your search" : "No patients yet"}
             message={
               query
                 ? "Try searching by a different name, phone number, or clear filters."
-                : "Register your first patient to begin capturing ambient clinical documentation."
+                : narrowed && hiddenCount > 0
+                  ? "You haven't consulted anyone here yet. Colleagues' patients are listed on the clinic page."
+                  : "Register your first patient to begin capturing ambient clinical documentation."
             }
             action={
               !query && (
@@ -220,7 +254,8 @@ export function PatientsPage() {
                           <div className="pts-patient-meta">
                             <div className="pts-patient-name">{patient.full_name}</div>
                             <div className="pts-patient-sub">
-                              {[age, patient.gender].filter(Boolean).join(" · ") || "Patient"}
+                              {[age, patient.gender].filter(Boolean).join(" · ") ||
+                                "Patient"}
                             </div>
                           </div>
                         </div>
@@ -248,7 +283,9 @@ export function PatientsPage() {
                         )}
                       </td>
                       <td>
-                        <span className="pts-date-cell">{formatDate(patient.created_at)}</span>
+                        <span className="pts-date-cell">
+                          {formatDate(patient.created_at)}
+                        </span>
                       </td>
                       <td style={{ textAlign: "right" }}>
                         <div className="pts-actions-cell">

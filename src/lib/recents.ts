@@ -28,7 +28,9 @@ function legacyKeyFor(doctorId: string): string {
 
 export function getRecentSessions(doctorId: string): RecentSession[] {
   try {
-    const raw = localStorage.getItem(keyFor(doctorId)) || localStorage.getItem(legacyKeyFor(doctorId));
+    const raw =
+      localStorage.getItem(keyFor(doctorId)) ||
+      localStorage.getItem(legacyKeyFor(doctorId));
     if (!raw) return [];
     const parsed: unknown = JSON.parse(raw);
     return Array.isArray(parsed) ? (parsed as RecentSession[]) : [];

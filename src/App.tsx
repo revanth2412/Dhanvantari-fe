@@ -4,14 +4,27 @@ import { useAuth } from "@/hooks/useAuth";
 import type { AuthStatus } from "@/context/authContext";
 import { FullScreenLoader } from "@/components/ui/EcgLoader";
 import { AppLayout } from "@/components/layout/AppLayout";
-import { LoginPage } from "@/pages/LoginPage";
-import { RegisterProfilePage } from "@/pages/RegisterProfilePage";
-import { AccessRevokedPage } from "@/pages/AccessRevokedPage";
-import { SelectClinicPage } from "@/pages/SelectClinicPage";
-import { LandingPage } from "@/pages/LandingPage";
-
-// Approved-area pages are code-split — auth screens load instantly, the
-// workspace loads on demand.
+// Every route is code-split, so the entry chunk is just the shell, the auth
+// bootstrap and the router. Each page then pulls only the CSS, icons and
+// animation code it actually uses — the login chunk, for instance, downloads
+// during the session check that already blocks the first paint.
+const LoginPage = lazy(() =>
+  import("@/pages/LoginPage").then((m) => ({ default: m.LoginPage })),
+);
+const LandingPage = lazy(() =>
+  import("@/pages/LandingPage").then((m) => ({ default: m.LandingPage })),
+);
+const RegisterProfilePage = lazy(() =>
+  import("@/pages/RegisterProfilePage").then((m) => ({
+    default: m.RegisterProfilePage,
+  })),
+);
+const AccessRevokedPage = lazy(() =>
+  import("@/pages/AccessRevokedPage").then((m) => ({ default: m.AccessRevokedPage })),
+);
+const SelectClinicPage = lazy(() =>
+  import("@/pages/SelectClinicPage").then((m) => ({ default: m.SelectClinicPage })),
+);
 const DashboardPage = lazy(() =>
   import("@/pages/DashboardPage").then((m) => ({ default: m.DashboardPage })),
 );
@@ -39,6 +52,9 @@ const ProfilePage = lazy(() =>
 );
 const ClinicPage = lazy(() =>
   import("@/pages/ClinicPage").then((m) => ({ default: m.ClinicPage })),
+);
+const ContactPage = lazy(() =>
+  import("@/pages/ContactPage").then((m) => ({ default: m.ContactPage })),
 );
 
 /** The single place each auth status is allowed to be. */
@@ -95,6 +111,7 @@ export default function App() {
     <Suspense fallback={<FullScreenLoader />}>
       <Routes>
         <Route path="/landing" element={<LandingPage />} />
+        <Route path="/contact" element={<ContactPage />} />
         <Route
           path="/login"
           element={
@@ -138,13 +155,18 @@ export default function App() {
         <Route
           path="/"
           element={
-            status === "unauthenticated" ? <LandingPage /> : <RouteFor allow={["approved"]} status={status} element={<AppLayout />} />
+            status === "unauthenticated" ? (
+              <LandingPage />
+            ) : (
+              <RouteFor allow={["approved"]} status={status} element={<AppLayout />} />
+            )
           }
         >
           <Route index element={<WorkspaceHome />} />
           <Route path="dashboard" element={<DashboardPage />} />
           <Route path="profile" element={<ProfilePage />} />
           <Route path="clinic" element={<ClinicPage />} />
+          <Route path="contact" element={<ContactPage />} />
           <Route path="patients" element={<PatientsPage />} />
           <Route path="patients/:patientId" element={<PatientDetailPage />} />
           <Route path="consultations/new" element={<NewConsultationPage />} />

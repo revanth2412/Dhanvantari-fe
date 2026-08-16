@@ -61,9 +61,9 @@ export function AccessRevokedPage() {
 
         <p className="muted" style={{ maxWidth: 400, margin: "0 auto" }}>
           Access for <strong>{doctor?.email}</strong> was revoked by a platform
-          administrator, so you can&rsquo;t use MediVaani in any clinic right now.
-          Contact your administrator to have it restored — this page updates automatically
-          once they do.
+          administrator, so you can&rsquo;t use MediVaani in any clinic right now. Contact
+          your administrator to have it restored — this page updates automatically once
+          they do.
         </p>
 
         <div

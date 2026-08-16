@@ -116,9 +116,18 @@ VITE_API_BASE_URL=http://localhost:8000       # or the Railway URL in prod
 `src/config/env.ts` validates these at startup and throws a clear error if any
 is missing.
 
+### Support page
+`/contact` publishes the support address with copy-to-clipboard and a
+pre-addressed mail-client link. There is deliberately **no in-app send form**:
+the backend has no mail endpoint, and a form that only pretends to send is worse
+than none. Add `POST /support/contact` on the backend first if you want one.
+
 ## Scripts
 - `npm run dev` — dev server (port 5173)
 - `npm run build` — type-check (`tsc -b`) + production build
+- `npm run preview` — serve the built `dist/` on port 4173. Use this to test the
+  production bundle: the release build is minified, chunk-split and obfuscated,
+  and none of that happens in `dev`.
 - `npm run lint` — eslint (0 warnings allowed)
 - `npm run format` — prettier
 

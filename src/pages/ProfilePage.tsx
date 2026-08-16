@@ -210,12 +210,19 @@ export function ProfilePage() {
             <div className="profile-telemetry-badge">
               <span className="profile-pulse-dot" />
               <strong>
-                {profile?.approval_status === "approved" ? "Verified Clinician" : "Account Active"}
+                {profile?.approval_status === "approved"
+                  ? "Verified Clinician"
+                  : "Account Active"}
               </strong>
             </div>
             <div className="profile-telemetry-sub">
               <span>OPD Ambient Scribe Active</span>
-              <small>Role: {profile?.role === "admin" ? "Platform Administrator" : "Attending Doctor"}</small>
+              <small>
+                Role:{" "}
+                {profile?.role === "admin"
+                  ? "Platform Administrator"
+                  : "Attending Doctor"}
+              </small>
             </div>
           </div>
         </div>
@@ -230,7 +237,10 @@ export function ProfilePage() {
           <div className="profile-card-v2__header">
             <div>
               <h2>Practice Credentials &amp; Profile</h2>
-              <p>These credentials appear on your generated clinical SOAP notes, prescriptions, and official medical exports.</p>
+              <p>
+                These credentials appear on your generated clinical SOAP notes,
+                prescriptions, and official medical exports.
+              </p>
             </div>
             <div className="profile-card-v2__icon-badge">
               <Stethoscope size={22} />
@@ -294,14 +304,16 @@ export function ProfilePage() {
                 <span>Reg No: {registrationNo || "KMC/12345"}</span>
               </div>
               <div className="profile-rx-address">
-                <MapPin size={12} /> {address || "Clinical OPD Practice Suite, General Hospital"}
+                <MapPin size={12} />{" "}
+                {address || "Clinical OPD Practice Suite, General Hospital"}
               </div>
             </div>
           </div>
 
           <div className="profile-card-v2__footer">
             <span>
-              <MapPin size={14} /> Synchronized automatically across all consultation notes
+              <MapPin size={14} /> Synchronized automatically across all consultation
+              notes
             </span>
             <Button
               variant="primary"
@@ -329,7 +341,8 @@ export function ProfilePage() {
             </div>
 
             <p className="profile-side-card__desc">
-              Collaborate seamlessly with colleagues and staff within your shared clinic roster.
+              Collaborate seamlessly with colleagues and staff within your shared clinic
+              roster.
             </p>
 
             <button
@@ -362,7 +375,11 @@ export function ProfilePage() {
                 <ShieldCheck size={14} />
                 <div>
                   <small>Authorization Role</small>
-                  <span>{profile?.role === "admin" ? "Platform Administrator" : "Attending Doctor"}</span>
+                  <span>
+                    {profile?.role === "admin"
+                      ? "Platform Administrator"
+                      : "Attending Doctor"}
+                  </span>
                 </div>
               </div>
 
@@ -371,7 +388,14 @@ export function ProfilePage() {
                 <div>
                   <small>Clinician Status</small>
                   <span style={{ color: "var(--green-700)", fontWeight: 700 }}>
-                    <CheckCircle2 size={13} style={{ display: "inline", verticalAlign: "middle", marginRight: 4 }} />
+                    <CheckCircle2
+                      size={13}
+                      style={{
+                        display: "inline",
+                        verticalAlign: "middle",
+                        marginRight: 4,
+                      }}
+                    />
                     Active &amp; Verified
                   </span>
                 </div>
@@ -379,7 +403,8 @@ export function ProfilePage() {
             </div>
 
             <p className="profile-side-card__desc" style={{ marginTop: 14 }}>
-              Protected under Digital Personal Data Protection (DPDP) Act 2023 regulations.
+              Protected under Digital Personal Data Protection (DPDP) Act 2023
+              regulations.
             </p>
           </div>
         </aside>

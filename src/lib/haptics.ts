@@ -31,7 +31,8 @@ const LEGACY_STORAGE_KEY = "dhanvantari.haptics";
 
 function readPreference(): boolean {
   try {
-    const val = localStorage.getItem(STORAGE_KEY) ?? localStorage.getItem(LEGACY_STORAGE_KEY);
+    const val =
+      localStorage.getItem(STORAGE_KEY) ?? localStorage.getItem(LEGACY_STORAGE_KEY);
     return val !== "off";
   } catch {
     return true;

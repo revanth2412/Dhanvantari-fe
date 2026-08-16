@@ -1,16 +1,24 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Activity,
   Building2,
+  CalendarClock,
   Check,
+  ChevronRight,
   ChevronsUpDown,
   Copy,
+  Globe,
   MapPin,
+  Mic,
   Pencil,
   Phone,
+  PhoneOff,
   PlusCircle,
+  Search,
   ShieldCheck,
   ShieldX,
+  Stethoscope,
   UserCog,
   UserPlus,
   Users,
@@ -34,11 +42,19 @@ import type {
   ClinicStats,
   MyClinic,
 } from "@/types/clinic";
-import { consultationStatusMeta, formatDate, formatDateTime } from "@/lib/format";
+import { searchPatients } from "@/services/patientService";
+import type { Patient } from "@/types/patient";
+import {
+  ageFromDob,
+  consultationStatusMeta,
+  formatDate,
+  formatDateTime,
+} from "@/lib/format";
 import { haptic } from "@/lib/haptics";
 import { useAuth } from "@/hooks/useAuth";
 import { useCachedQuery } from "@/hooks/useCachedQuery";
 import { useDataCache } from "@/hooks/useDataCache";
+import { useDebounce } from "@/hooks/useDebounce";
 import { useToast } from "@/hooks/useToast";
 import { Avatar } from "@/components/ui/Avatar";
 import { Badge } from "@/components/ui/Badge";
@@ -148,8 +164,11 @@ function EditClinicDrawer({
 
 export function ClinicPage() {
   const { doctor, refreshProfile } = useAuth();
+  const navigate = useNavigate();
   const toast = useToast();
   const cache = useDataCache();
+  const [patientQuery, setPatientQuery] = useState("");
+  const debouncedPatientQuery = useDebounce(patientQuery, 260);
   const [editOpen, setEditOpen] = useState(false);
   const [inviteOpen, setInviteOpen] = useState(false);
   const [switcherOpen, setSwitcherOpen] = useState(false);
@@ -181,6 +200,14 @@ export function ClinicPage() {
   const consultationsQuery = useCachedQuery<ClinicConsultation[]>(
     "clinic:consultations",
     getClinicConsultations,
+    { enabled: isClinicAdmin },
+  );
+  /* `GET /patients` is widened to the whole clinic for a clinic admin, so this
+     is the clinic directory. The roster page narrows the same data down to the
+     doctor's own patients — the full view belongs here. */
+  const patientsQuery = useCachedQuery<Patient[]>(
+    `patients:list:${debouncedPatientQuery.trim()}`,
+    () => searchPatients(debouncedPatientQuery),
     { enabled: isClinicAdmin },
   );
 
@@ -268,6 +295,30 @@ export function ClinicPage() {
   const stats = statsQuery.data;
   const consultations = consultationsQuery.data ?? [];
   const otherClinics = memberships.filter((m) => m.clinic_id !== clinic.id);
+  const clinicPatients = patientsQuery.data ?? [];
+
+  /** doctor id → name, for attributing consultations to a colleague. */
+  const doctorNames = new Map(members.map((m) => [m.doctor_id, m.full_name]));
+  const doctorNameFor = (id: string | null) =>
+    id ? (doctorNames.get(id) ?? (id === doctor?.id ? doctor.full_name : "—")) : "—";
+
+  /** Per-patient activity, rolled up from the clinic's consultation log. */
+  const patientActivity = new Map<
+    string,
+    { count: number; last: string | null; doctorIds: Set<string> }
+  >();
+  for (const item of consultations) {
+    const entry = patientActivity.get(item.patient_id) ?? {
+      count: 0,
+      last: null,
+      doctorIds: new Set<string>(),
+    };
+    entry.count += 1;
+    // ISO-8601 sorts lexicographically, so a plain compare finds the latest.
+    if (!entry.last || item.created_at > entry.last) entry.last = item.created_at;
+    if (item.doctor_id) entry.doctorIds.add(item.doctor_id);
+    patientActivity.set(item.patient_id, entry);
+  }
 
   return (
     <main className="page page--wide">
@@ -290,15 +341,7 @@ export function ClinicPage() {
           </div>
         </div>
 
-        <div
-          style={{
-            position: "relative",
-            zIndex: 1,
-            display: "flex",
-            gap: 10,
-            flexWrap: "wrap",
-          }}
-        >
+        <div className="clinic-hero__actions">
           {otherClinics.length > 0 && (
             <Button
               onClick={() => setSwitcherOpen(true)}
@@ -544,6 +587,128 @@ export function ClinicPage() {
         </div>
       </div>
 
+      {/* ---------- every patient in the clinic (clinic admin only) ---------- */}
+      {isClinicAdmin && (
+        <section style={{ marginTop: 16 }}>
+          <div className="panel-head" style={{ padding: "0 0 12px" }}>
+            <h2 style={{ fontSize: "1rem" }}>Clinic patients</h2>
+            <span className="muted" style={{ fontSize: "0.8rem" }}>
+              Everyone registered at {clinic.name}
+            </span>
+          </div>
+
+          <div className="ui-card" style={{ overflow: "hidden" }}>
+            <div className="clinic-pt-search">
+              <Search size={15} />
+              <input
+                type="text"
+                value={patientQuery}
+                onChange={(e) => setPatientQuery(e.target.value)}
+                placeholder="Search clinic patients by name or phone…"
+                aria-label="Search clinic patients"
+              />
+              {patientQuery && (
+                <button type="button" onClick={() => setPatientQuery("")}>
+                  ×
+                </button>
+              )}
+            </div>
+
+            {patientsQuery.loading ? (
+              <SkeletonRows rows={5} height={62} />
+            ) : clinicPatients.length === 0 ? (
+              <EmptyState
+                icon={<Users size={22} />}
+                title={patientQuery ? "No patients match" : "No patients registered yet"}
+                message={
+                  patientQuery
+                    ? "Try a different name or phone number."
+                    : "They'll appear here as your doctors register them."
+                }
+              />
+            ) : (
+              clinicPatients.map((patient) => {
+                const activity = patientActivity.get(patient.id);
+                const seenBy = [...(activity?.doctorIds ?? [])].map(doctorNameFor);
+                return (
+                  <div className="clinic-pt-row" key={patient.id}>
+                    <Avatar name={patient.full_name} size={38} />
+
+                    <div className="clinic-pt-main">
+                      <div className="clinic-pt-name">
+                        {patient.full_name}
+                        {patient.do_not_call && (
+                          <span className="clinic-pt-flag" title="Do not call">
+                            <PhoneOff size={11} /> Do not call
+                          </span>
+                        )}
+                      </div>
+                      <div className="clinic-pt-facts">
+                        <span>
+                          {[ageFromDob(patient.dob), patient.gender]
+                            .filter(Boolean)
+                            .join(" · ") || "Age not recorded"}
+                        </span>
+                        <span>
+                          <Phone size={11} /> {patient.phone ?? "No phone"}
+                        </span>
+                        <span>
+                          <Globe size={11} /> {patient.language_pref ?? "English"}
+                        </span>
+                        <span>
+                          <CalendarClock size={11} /> Registered{" "}
+                          {formatDate(patient.created_at)}
+                        </span>
+                      </div>
+                      <div className="clinic-pt-facts clinic-pt-facts--care">
+                        <span>
+                          <Activity size={11} /> {activity?.count ?? 0} consultation
+                          {activity?.count === 1 ? "" : "s"}
+                        </span>
+                        {activity?.last && (
+                          <span>Last visit {formatDate(activity.last)}</span>
+                        )}
+                        {seenBy.length > 0 && (
+                          <span>
+                            <Stethoscope size={11} /> Seen by {seenBy.join(", ")}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="clinic-pt-actions">
+                      <Button
+                        size="sm"
+                        onClick={() =>
+                          navigate(`/consultations/new?patient_id=${patient.id}`)
+                        }
+                        title="Start a consultation with this patient"
+                      >
+                        <Mic size={14} /> Consult
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        iconOnly
+                        onClick={() => navigate(`/patients/${patient.id}`)}
+                        aria-label={`Open ${patient.full_name}'s chart`}
+                        title="Open the full chart"
+                      >
+                        <ChevronRight size={16} />
+                      </Button>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+          <p className="muted" style={{ fontSize: "0.76rem", marginTop: 8 }}>
+            The directory returns the 50 most recently registered patients — search to
+            reach older records.
+          </p>
+        </section>
+      )}
+
       {isClinicAdmin && (
         <section style={{ marginTop: 16 }}>
           <div className="panel-head" style={{ padding: "0 0 12px" }}>
@@ -572,7 +737,8 @@ export function ClinicPage() {
                         {item.patient_name ?? "Patient"}
                       </div>
                       <div className="member-row__sub">
-                        {formatDateTime(item.created_at)}
+                        {formatDateTime(item.created_at)} · conducted by{" "}
+                        {doctorNameFor(item.doctor_id)}
                       </div>
                     </div>
                     <Badge tone={meta.tone} dot>

@@ -1,7 +1,17 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { NavLink, useNavigate } from "react-router-dom";
-import { Building2, Home, LogOut, Mic, ShieldCheck, User, Users, X } from "lucide-react";
+import {
+  Building2,
+  Headphones,
+  Home,
+  LogOut,
+  Mic,
+  ShieldCheck,
+  User,
+  Users,
+  X,
+} from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { haptic } from "@/lib/haptics";
 import { Avatar } from "@/components/ui/Avatar";
@@ -84,6 +94,16 @@ function AccountSheet({ onClose }: { onClose: () => void }) {
             <ShieldCheck size={16} /> Admin console
           </Button>
         )}
+
+        <Button
+          block
+          onClick={() => {
+            onClose();
+            navigate("/contact");
+          }}
+        >
+          <Headphones size={16} /> Support &amp; Contact
+        </Button>
 
         <Button variant="danger-soft" block onClick={() => void signOut()}>
           <LogOut size={16} /> Sign out

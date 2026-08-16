@@ -128,7 +128,10 @@ export function buildNoteText(note: ClinicalNote, patientName?: string | null): 
 }
 
 /** Builds a structured ICD-10 coded SOAP (Subjective, Objective, Assessment, Plan) plain-text note. */
-export function buildSoapNoteText(note: ClinicalNote, patientName?: string | null): string {
+export function buildSoapNoteText(
+  note: ClinicalNote,
+  patientName?: string | null,
+): string {
   const lines: string[] = [];
   const push = (s = "") => lines.push(s);
 
@@ -149,14 +152,21 @@ export function buildSoapNoteText(note: ClinicalNote, patientName?: string | nul
   if (note.symptoms?.length) {
     push("History of Present Illness:");
     for (const s of note.symptoms) {
-      const extra = [s.duration ? `Duration: ${s.duration}` : null, s.severity ? `Severity: ${s.severity}` : null, s.notes].filter(Boolean).join(" · ");
+      const extra = [
+        s.duration ? `Duration: ${s.duration}` : null,
+        s.severity ? `Severity: ${s.severity}` : null,
+        s.notes,
+      ]
+        .filter(Boolean)
+        .join(" · ");
       push(`  • ${s.name}${extra ? ` (${extra})` : ""}`);
     }
   }
   const h = note.history;
   if (h && (h.medical?.length || h.medications_current?.length || h.allergies?.length)) {
     if (h.medical?.length) push(`Past Medical History: ${h.medical.join(", ")}`);
-    if (h.medications_current?.length) push(`Current Medications: ${h.medications_current.join(", ")}`);
+    if (h.medications_current?.length)
+      push(`Current Medications: ${h.medications_current.join(", ")}`);
     if (h.allergies?.length) push(`Allergies: ${h.allergies.join(", ")}`);
   }
   const sh = note.social_history;
@@ -224,7 +234,9 @@ export function buildSoapNoteText(note: ClinicalNote, patientName?: string | nul
   }
   const f = note.follow_up;
   if (f?.required) {
-    push(`Follow-up: After ${f.after_days ?? "prescribed"} days${f.reason ? ` — ${f.reason}` : ""}`);
+    push(
+      `Follow-up: After ${f.after_days ?? "prescribed"} days${f.reason ? ` — ${f.reason}` : ""}`,
+    );
   }
   if (note.unclear_segments?.length) {
     push("Ambiguities / Doctor Review:");

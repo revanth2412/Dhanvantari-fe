@@ -2,6 +2,7 @@ import { Suspense, type SyntheticEvent } from "react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import {
   Building2,
+  Headphones,
   LayoutDashboard,
   LogOut,
   Mic,
@@ -87,6 +88,15 @@ export function AppLayout() {
             onClick={releaseFocus}
           >
             <Building2 size={18} /> <span className="side-label">Clinic</span>
+          </NavLink>
+          <NavLink
+            to="/contact"
+            className={linkClass}
+            title="Support & Contact"
+            onClick={releaseFocus}
+          >
+            <Headphones size={18} />{" "}
+            <span className="side-label">Support &amp; Contact</span>
           </NavLink>
           {isAdmin && (
             <>
