@@ -36,6 +36,14 @@ export async function updateMyProfile(input: DoctorSelfUpdateInput): Promise<Doc
   return apiRequest<Doctor>("/auth/me", { method: "PATCH", body: input });
 }
 
+/*
+ * NOTE: there is no self-service "request access again" endpoint any more —
+ * `POST /auth/reapply` was removed when signup stopped requiring approval.
+ * Restoring a revoked account is an admin action:
+ *   - globally revoked  -> `POST /admin/doctors/{id}/activate` (platform admin)
+ *   - revoked in one clinic -> `POST /clinics/me/members/{id}/activate` (clinic admin)
+ */
+
 /** `GET /doctors/{doctor_id}` — load a doctor's current profile details. */
 export function getDoctor(doctorId: string): Promise<Doctor> {
   return apiRequest<Doctor>(`/doctors/${doctorId}`);
@@ -45,6 +53,9 @@ export function getDoctor(doctorId: string): Promise<Doctor> {
  * `PATCH /doctors/{doctor_id}` — update the profile fields exposed in Settings.
  * Account access controls intentionally stay out of the self-service UI.
  */
-export function updateDoctor(doctorId: string, input: DoctorUpdateInput): Promise<Doctor> {
+export function updateDoctor(
+  doctorId: string,
+  input: DoctorUpdateInput,
+): Promise<Doctor> {
   return apiRequest<Doctor>(`/doctors/${doctorId}`, { method: "PATCH", body: input });
 }

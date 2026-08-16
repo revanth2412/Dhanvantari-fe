@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { NavLink, useNavigate } from "react-router-dom";
-import { Home, LogOut, Mic, ShieldCheck, User, Users, X } from "lucide-react";
+import { Building2, Home, LogOut, Mic, ShieldCheck, User, Users, X } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { haptic } from "@/lib/haptics";
 import { Avatar } from "@/components/ui/Avatar";
@@ -53,6 +53,10 @@ function AccountSheet({ onClose }: { onClose: () => void }) {
             <span className="pt-fact__v">{doctor?.registration_no ?? "—"}</span>
           </div>
           <div className="pt-fact">
+            <span className="pt-fact__k">Clinic</span>
+            <span className="pt-fact__v">{doctor?.clinic_name ?? "Not set up"}</span>
+          </div>
+          <div className="pt-fact">
             <span className="pt-fact__k">Role</span>
             <span className="pt-fact__v">{isAdmin ? "Administrator" : "Doctor"}</span>
           </div>
@@ -67,6 +71,19 @@ function AccountSheet({ onClose }: { onClose: () => void }) {
         >
           <User size={16} /> Edit profile
         </Button>
+
+        {/* Admins reach the console here — the tab bar slot is the Clinic page. */}
+        {isAdmin && (
+          <Button
+            block
+            onClick={() => {
+              onClose();
+              navigate("/admin");
+            }}
+          >
+            <ShieldCheck size={16} /> Admin console
+          </Button>
+        )}
 
         <Button variant="danger-soft" block onClick={() => void signOut()}>
           <LogOut size={16} /> Sign out
@@ -83,10 +100,8 @@ function AccountSheet({ onClose }: { onClose: () => void }) {
  * sidebar takes over (both live in the DOM; CSS decides which is visible).
  */
 export function MobileTabBar() {
-  const { doctor } = useAuth();
   const navigate = useNavigate();
   const [accountOpen, setAccountOpen] = useState(false);
-  const isAdmin = doctor?.role === "admin";
 
   const itemClass = ({ isActive }: { isActive: boolean }) =>
     `tabbar__item ${isActive ? "tabbar__item--active" : ""}`;
@@ -94,7 +109,11 @@ export function MobileTabBar() {
   return (
     <>
       <nav className="tabbar" aria-label="Primary">
-        <NavLink to="/dashboard" className={itemClass} onClick={() => haptic("selection")}>
+        <NavLink
+          to="/dashboard"
+          className={itemClass}
+          onClick={() => haptic("selection")}
+        >
           <Home size={20} />
           <span>Home</span>
         </NavLink>
@@ -115,14 +134,10 @@ export function MobileTabBar() {
           <Mic size={22} />
         </button>
 
-        {isAdmin ? (
-          <NavLink to="/admin" className={itemClass} onClick={() => haptic("selection")}>
-            <ShieldCheck size={20} />
-            <span>Approve</span>
-          </NavLink>
-        ) : (
-          <span className="tabbar__item tabbar__item--spacer" aria-hidden />
-        )}
+        <NavLink to="/clinic" className={itemClass} onClick={() => haptic("selection")}>
+          <Building2 size={20} />
+          <span>Clinic</span>
+        </NavLink>
 
         <button
           type="button"

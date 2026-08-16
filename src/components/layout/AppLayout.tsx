@@ -1,11 +1,20 @@
 import { Suspense, type SyntheticEvent } from "react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
-import { Activity, LayoutDashboard, LogOut, Mic, ShieldCheck, Users } from "lucide-react";
+import {
+  Activity,
+  Building2,
+  LayoutDashboard,
+  LogOut,
+  Mic,
+  ShieldCheck,
+  Users,
+} from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { Avatar } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/Button";
 import { EcgLoader } from "@/components/ui/EcgLoader";
 import { MobileTabBar } from "@/components/layout/MobileTabBar";
+import { ClinicGate } from "@/components/clinic/ClinicGate";
 
 /** The sidebar expands on hover AND :focus-within; a clicked link keeps focus,
  * which would pin it open after the pointer leaves — so blur on click. */
@@ -64,16 +73,25 @@ export function AppLayout() {
           >
             <Users size={18} /> <span className="side-label">Patients</span>
           </NavLink>
+          <NavLink
+            to="/clinic"
+            className={linkClass}
+            title="Clinic"
+            onClick={releaseFocus}
+          >
+            <Building2 size={18} /> <span className="side-label">Clinic</span>
+          </NavLink>
           {isAdmin && (
             <>
               <div className="side-nav__section side-label">Manage</div>
               <NavLink
                 to="/admin"
                 className={linkClass}
-                title="Approvals"
+                title="Administration"
                 onClick={releaseFocus}
               >
-                <ShieldCheck size={18} /> <span className="side-label">Approvals</span>
+                <ShieldCheck size={18} />{" "}
+                <span className="side-label">Administration</span>
               </NavLink>
             </>
           )}
@@ -114,18 +132,22 @@ export function AppLayout() {
       </aside>
 
       <div className="shell__main">
-        <Suspense
-          fallback={
-            <div
-              className="page"
-              style={{ display: "grid", placeItems: "center", minHeight: "50vh" }}
-            >
-              <EcgLoader label="Loading…" />
-            </div>
-          }
-        >
-          <Outlet />
-        </Suspense>
+        {/* Blocks the workspace if this clinic (or this membership) was revoked,
+            offering a switch to another clinic the doctor still belongs to. */}
+        <ClinicGate>
+          <Suspense
+            fallback={
+              <div
+                className="page"
+                style={{ display: "grid", placeItems: "center", minHeight: "50vh" }}
+              >
+                <EcgLoader label="Loading…" />
+              </div>
+            }
+          >
+            <Outlet />
+          </Suspense>
+        </ClinicGate>
       </div>
 
       <MobileTabBar />

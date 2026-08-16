@@ -11,12 +11,14 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { TextField } from "@/components/ui/Field";
 import { SkeletonRows } from "@/components/ui/Skeleton";
 import { PatientFormDrawer } from "@/components/patients/PatientFormDrawer";
+import { useAuth } from "@/hooks/useAuth";
 import { useCachedQuery } from "@/hooks/useCachedQuery";
 import { useDebounce } from "@/hooks/useDebounce";
 import { useReveal } from "@/hooks/useReveal";
 
 export function PatientsPage() {
   const navigate = useNavigate();
+  const { doctor } = useAuth();
   const [query, setQuery] = useState("");
   const debouncedQuery = useDebounce(query, 280);
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -36,7 +38,14 @@ export function PatientsPage() {
         <div>
           <h1>Patients</h1>
           <p className="page-head__sub">
-            Search by name or phone, or add a new patient to your practice.
+            {doctor?.clinic_name ? (
+              <>
+                Patients at <strong>{doctor.clinic_name}</strong> — search by name or
+                phone, or add a new one.
+              </>
+            ) : (
+              "Search by name or phone, or add a new patient to your practice."
+            )}
           </p>
         </div>
         <Button variant="primary" onClick={() => setDrawerOpen(true)}>

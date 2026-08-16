@@ -1,7 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft } from "lucide-react";
-import { getConsultation, reprocessConsultation } from "@/services/consultationService";
+import { ArrowLeft, Trash2 } from "lucide-react";
+import {
+  discardConsultation,
+  getConsultation,
+  reprocessConsultation,
+} from "@/services/consultationService";
 import { getPatient } from "@/services/patientService";
 import { rememberSession } from "@/lib/recents";
 import { ageFromDob, consultationStatusMeta } from "@/lib/format";
@@ -12,7 +16,7 @@ import { useToast } from "@/hooks/useToast";
 import { Avatar } from "@/components/ui/Avatar";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
-import { Drawer } from "@/components/ui/Modal";
+import { Drawer, Modal } from "@/components/ui/Modal";
 import { EcgLoader } from "@/components/ui/EcgLoader";
 import { CaptureStage } from "@/components/consultation/CaptureStage";
 import { PipelineStatus } from "@/components/consultation/PipelineStatus";
@@ -37,6 +41,8 @@ export function ConsultationSessionPage() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [retrying, setRetrying] = useState(false);
   const [showTranscript, setShowTranscript] = useState(false);
+  const [discardOpen, setDiscardOpen] = useState(false);
+  const [discarding, setDiscarding] = useState(false);
   const pollRef = useRef<number>(0);
 
   const applyConsultation = useCallback(
@@ -122,6 +128,30 @@ export function ConsultationSessionPage() {
     }
   }
 
+  async function handleDiscard() {
+    if (!consultation) return;
+    setDiscarding(true);
+    try {
+      const next = await discardConsultation(consultation.id);
+      applyConsultation(next, patient?.full_name);
+      setDiscardOpen(false);
+      toast({
+        kind: "success",
+        title: "Consultation discarded",
+        message: "It no longer appears in listings.",
+      });
+    } catch (err) {
+      toast({
+        kind: "error",
+        title: "Could not discard",
+        // 409 = already finalized; the backend protects the signed record.
+        message: err instanceof Error ? err.message : undefined,
+      });
+    } finally {
+      setDiscarding(false);
+    }
+  }
+
   if (loadError) {
     return (
       <main className="page">
@@ -153,11 +183,17 @@ export function ConsultationSessionPage() {
   }
 
   const meta = consultationStatusMeta[consultation.status];
-  const showCapture = consultation.status === "recording";
+  const isDiscarded = consultation.status === "discarded";
+  const showCapture = consultation.status === "recording" && !isDiscarded;
   const showPipeline =
-    PIPELINE_ACTIVE.includes(consultation.status) || consultation.status === "failed";
+    !isDiscarded &&
+    (PIPELINE_ACTIVE.includes(consultation.status) || consultation.status === "failed");
   const showReview =
-    consultation.status === "draft_ready" || consultation.status === "finalized";
+    !isDiscarded &&
+    (consultation.status === "draft_ready" || consultation.status === "finalized");
+  // Finalized records are signed clinical documents — the backend refuses to
+  // discard them (409), so don't offer the action.
+  const canDiscard = !isDiscarded && consultation.status !== "finalized";
 
   return (
     <main className={`page ${showReview ? "page--wide" : ""}`}>
@@ -189,6 +225,30 @@ export function ConsultationSessionPage() {
           >
             {meta.label}
           </Badge>
+          {canDiscard && (
+            <Button
+              variant="danger-soft"
+              size="sm"
+              onClick={() => setDiscardOpen(true)}
+              title="Discard this consultation"
+            >
+              <Trash2 size={14} /> Discard
+            </Button>
+          )}
+        </div>
+      )}
+
+      {isDiscarded && (
+        <div className="ui-card ui-card--pad discarded-note">
+          <Trash2 size={20} />
+          <div>
+            <strong>This consultation was discarded.</strong>
+            <p className="muted" style={{ fontSize: "0.87rem", marginTop: 2 }}>
+              It stays out of listings and can&rsquo;t be processed further. Start a new
+              consultation if you need to record this visit again.
+            </p>
+          </div>
+          <Button onClick={() => navigate("/consultations/new")}>New consultation</Button>
         </div>
       )}
 
@@ -224,6 +284,7 @@ export function ConsultationSessionPage() {
             patientName={patient?.full_name}
             onBack={() => navigate(-1)}
             onShowTranscript={() => setShowTranscript(true)}
+            onDiscard={canDiscard ? () => setDiscardOpen(true) : undefined}
             onFinalized={() =>
               applyConsultation(
                 { ...consultation, status: "finalized" },
@@ -240,6 +301,36 @@ export function ConsultationSessionPage() {
           </Drawer>
         </>
       )}
+
+      <Modal
+        open={discardOpen}
+        onClose={() => setDiscardOpen(false)}
+        title="Discard this consultation?"
+        footer={
+          <>
+            <Button
+              variant="ghost"
+              onClick={() => setDiscardOpen(false)}
+              disabled={discarding}
+            >
+              Keep it
+            </Button>
+            <Button
+              variant="danger"
+              loading={discarding}
+              onClick={() => void handleDiscard()}
+            >
+              <Trash2 size={15} /> Discard
+            </Button>
+          </>
+        }
+      >
+        <p style={{ color: "var(--ink-2)", fontSize: "0.93rem" }}>
+          The session for <strong>{patient?.full_name ?? "this patient"}</strong> will be
+          hidden from listings and can no longer be processed. The recording and any draft
+          note are retained for audit, but you won&rsquo;t be able to work on them.
+        </p>
+      </Modal>
     </main>
   );
 }

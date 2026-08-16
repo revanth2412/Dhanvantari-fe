@@ -55,11 +55,13 @@ src/
   types/                    # doctor, patient, consultation, record — mirror backend Pydantic schemas
   services/                 # ALL backend/Supabase calls live here (no fetch/supabase in components)
     authService.ts          # supabase.auth wrappers
-    doctorService.ts        # /auth/me, /auth/register
-    patientService.ts       # /patients CRUD + search
-    consultationService.ts  # create, get, multipart recording upload, process (retry), transcript
+    doctorService.ts        # /auth/me (GET + PATCH self-update), /auth/register
+    clinicService.ts        # /clinics create/join/me/members/update (works while `pending`)
+    statsService.ts         # /stats/me — the doctor's own activity counts
+    patientService.ts       # /patients CRUD + search (clinic-scoped by the backend)
+    consultationService.ts  # create, get, multipart upload, process (retry), discard, transcript
     recordService.ts        # consultation record, update (new version), finalize, patient history
-    adminService.ts         # /admin/doctors list/approve/reject/make-admin
+    adminService.ts         # /admin clinics + doctors + consultations + stats + access control
   context/
     authContext.ts          # createContext + types (AuthStatus). NO component here (fast-refresh).
     AuthProvider.tsx        # session + doctor state; derives AuthStatus; silent refreshes for polling
@@ -76,6 +78,7 @@ src/
                             #   animated stepper), TranscriptPanel (diarized segments)
     note/NotePanel.tsx      # clinical note: view sections, inline edit -> PUT new version,
                             #   finalize modal, confidence ring, copy-as-text
+  pages/ClinicPage.tsx      # clinic details/edit, invite code, member list, create-or-join
   pages/                    # one screen each: Login (split hero), RegisterProfile (wizard),
                             #   PendingApproval (auto-poll), Dashboard, Patients,
                             #   PatientDetail, NewConsultation (wizard), ConsultationSession
@@ -127,11 +130,50 @@ src/
 `AuthProvider` computes a single `AuthStatus` used for all routing:
 `loading | unauthenticated | unregistered | pending | rejected | approved`.
 - `unregistered` = signed into Supabase but `GET /auth/me` returned 404.
+- **`rejected` covers two different backend states** — check `doctor.approval_status`
+  before offering account actions: `"rejected"` (admin declined; the doctor may
+  `POST /auth/reapply`) vs `"approved"` with `active === false` (access revoked;
+  re-applying 409s, only an admin can restore it).
 - `approved` requires `approval_status === "approved"` AND `active === true`.
 - Routing lives in `App.tsx`: each route renders only for allowed statuses,
   else redirects to that status's home path.
 - After Google OAuth redirect, Supabase restores the session
   (`detectSessionInUrl: true`) and `onAuthStateChange` fires → profile is refetched.
+
+## Access model (READ THIS BEFORE TOUCHING AUTH)
+Signup is **auto-approved** — there is no approval queue, and no
+`approve`/`reject`/`reapply` endpoints (they were removed; calling them 404s).
+Access is controlled by three independent switches:
+
+| Switch | Set by | Effect | Restored by |
+|---|---|---|---|
+| `doctor.active` | platform admin (`/admin/doctors/{id}/revoke`) | blocked in **every** clinic | `/admin/doctors/{id}/activate` |
+| membership `active` | clinic admin (`/clinics/me/members/{id}/revoke`) | blocked in **that clinic only** | `/clinics/me/members/{id}/activate` |
+| `clinic.active` | platform admin (`/admin/clinics/{id}/revoke`) | clinic closed for **everyone** | `/admin/clinics/{id}/activate` |
+
+`AuthStatus` only knows the first (`/auth/me` carries no membership flags):
+`revoked` = globally disabled, `no_clinic` = nothing selected yet. The other two
+are detected by `ClinicGate` via `GET /clinics/mine`, which also offers a switch
+to another clinic — a doctor blocked in one clinic may still work in others.
+**There is no self-service re-request**; only an admin can restore access.
+
+## Clinics & data scoping (important)
+- A doctor can belong to **several clinics** (`ClinicMember`); `doctor.clinic_id`
+  is merely the *currently-selected* one, changed with `POST /clinics/switch`.
+- Within a clinic the membership `role` decides visibility: **clinic admin**
+  (whoever created the clinic) sees every patient/consultation in it; a regular
+  member sees only the records they created. Cross-scope reads return **404**,
+  so the FE needs no filtering of its own.
+- `Doctor` carries `clinic_id` + `clinic_name`; a doctor with `clinic_id === null`
+  works against the shared "unassigned" pool until they create or join one.
+- Onboarding is **self-service**: `POST /clinics` (create, returns a `join_code`)
+  or `POST /clinics/join` (join by code). Both work while `approval_status` is
+  still `pending`, which is why the registration wizard sets the clinic up right
+  after `POST /auth/register` — `/clinics` needs the doctor row to exist first.
+- **Adding a colleague = sharing the join code.** There is no invite endpoint;
+  the Clinic page surfaces the code to copy.
+- **Admin views never return patient PII** (DPDP): `ConsultationAdmin` has an
+  opaque `patient_id` and no name/phone — don't try to display patient names there.
 
 ## Backend API contract (what the FE uses)
 Base URL = `VITE_API_BASE_URL`. All authed requests send `Authorization: Bearer <supabase_jwt>`.
@@ -139,7 +181,9 @@ Base URL = `VITE_API_BASE_URL`. All authed requests send `Authorization: Bearer 
 | Method | Path | Purpose | Notes |
 |---|---|---|---|
 | GET | `/auth/me` | current doctor profile | 404 = not registered yet |
-| POST | `/auth/register` | create profile for the signed-in user | body: `{full_name, phone?, specialty?, registration_no?}` |
+| PATCH | `/auth/me` | doctor self-updates own profile | `{full_name?, phone?, address?, specialty?, registration_no?}`; email/role/approval not editable |
+| POST | `/auth/register` | create profile for the signed-in user | body: `{full_name, phone?, specialty?, registration_no?, address?}` |
+| POST | `/auth/reapply` | rejected doctor requests access again | → `pending` + re-activated; **409 unless `approval_status === "rejected"`** |
 | GET | `/admin/doctors?approval_status=` | list doctors (admin only) | for the future admin UI |
 | POST | `/admin/doctors/{id}/approve` | approve (admin only) | |
 | POST | `/admin/doctors/{id}/reject` | reject (admin only) | |

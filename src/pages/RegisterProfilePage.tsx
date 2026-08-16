@@ -1,7 +1,8 @@
 import { useState } from "react";
-import { ArrowLeft, ArrowRight, Stethoscope } from "lucide-react";
+import { ArrowLeft, ArrowRight, Building2, KeyRound, Stethoscope } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { registerProfile } from "@/services/doctorService";
+import { createClinic, joinClinic } from "@/services/clinicService";
 import { Button } from "@/components/ui/Button";
 import { TextAreaField, TextField } from "@/components/ui/Field";
 
@@ -18,9 +19,17 @@ const SPECIALTIES = [
   "Endocrinology",
 ];
 
+type ClinicMode = "create" | "join" | "skip";
+
+const STEP_COUNT = 4;
+
 /**
  * First-time onboarding for a signed-in user with no doctor profile:
- * a 3-step wizard (identity → practice → review) that ends in `pending`.
+ * identity → practice → clinic → review.
+ *
+ * The clinic decides what the doctor can see — patients are scoped to a clinic —
+ * so it is set up here. The profile must exist before /clinics accepts the call,
+ * hence both happen on submit, in order.
  */
 export function RegisterProfilePage() {
   const { session, refreshProfile, signOut } = useAuth();
@@ -30,6 +39,12 @@ export function RegisterProfilePage() {
   const [specialty, setSpecialty] = useState("");
   const [registrationNo, setRegistrationNo] = useState("");
   const [address, setAddress] = useState("");
+  const [clinicMode, setClinicMode] = useState<ClinicMode>("create");
+  const [clinicName, setClinicName] = useState("");
+  const [clinicCity, setClinicCity] = useState("");
+  const [clinicPhone, setClinicPhone] = useState("");
+  const [clinicAddress, setClinicAddress] = useState("");
+  const [joinCode, setJoinCode] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -44,6 +59,26 @@ export function RegisterProfilePage() {
         phone: phone.trim() || null,
         address: address.trim() || null,
       });
+
+      // The clinic step is best-effort: the profile is already created, so a
+      // clinic failure must not strand the doctor on this screen. They can
+      // finish setting it up from the Clinic page.
+      try {
+        if (clinicMode === "create" && clinicName.trim()) {
+          await createClinic({
+            name: clinicName.trim(),
+            city: clinicCity.trim() || null,
+            phone: clinicPhone.trim() || null,
+            address: clinicAddress.trim() || null,
+          });
+        } else if (clinicMode === "join" && joinCode.trim()) {
+          await joinClinic({ join_code: joinCode });
+        }
+      } catch (clinicErr) {
+        // Surfaced on the Clinic page instead of blocking onboarding.
+        console.warn("clinic setup deferred:", clinicErr);
+      }
+
       await refreshProfile();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not create your profile");
@@ -51,7 +86,12 @@ export function RegisterProfilePage() {
     }
   }
 
-  const canNext = step === 0 ? fullName.trim().length >= 2 : true;
+  const canNext =
+    step === 0
+      ? fullName.trim().length >= 2
+      : step === 2
+        ? clinicMode !== "create" || clinicName.trim().length >= 2
+        : true;
 
   return (
     <div className="center-screen">
@@ -81,7 +121,7 @@ export function RegisterProfilePage() {
         </div>
 
         <div className="onb-steps" aria-hidden>
-          {[0, 1, 2].map((i) => (
+          {Array.from({ length: STEP_COUNT }, (_, i) => i).map((i) => (
             <span
               key={i}
               className={`onb-steps__dot ${i <= step ? "onb-steps__dot--done" : ""}`}
@@ -137,7 +177,7 @@ export function RegisterProfilePage() {
               value={registrationNo}
               onChange={(e) => setRegistrationNo(e.target.value)}
               placeholder="e.g. KMC/12345"
-              hint="Helps your admin verify and approve you faster."
+              hint="Appears on the notes you finalize."
             />
             <TextAreaField
               label="Practice address"
@@ -151,6 +191,98 @@ export function RegisterProfilePage() {
 
         {step === 2 && (
           <div className="onb-pane" key="s2">
+            <div>
+              <h3 style={{ fontSize: "1rem", marginBottom: 4 }}>Your clinic</h3>
+              <p className="muted" style={{ fontSize: "0.84rem" }}>
+                Patients belong to a clinic, and you&rsquo;ll only see the ones in yours.
+                Start a new clinic or join your colleagues with their code.
+              </p>
+            </div>
+
+            <div className="clinic-choice">
+              <button
+                type="button"
+                className={`clinic-choice__opt ${clinicMode === "create" ? "clinic-choice__opt--on" : ""}`}
+                onClick={() => setClinicMode("create")}
+              >
+                <Building2 size={18} />
+                <span>Create a clinic</span>
+                <small>I&rsquo;m setting up a new practice</small>
+              </button>
+              <button
+                type="button"
+                className={`clinic-choice__opt ${clinicMode === "join" ? "clinic-choice__opt--on" : ""}`}
+                onClick={() => setClinicMode("join")}
+              >
+                <KeyRound size={18} />
+                <span>Join with a code</span>
+                <small>My colleagues already use Dhanvantari</small>
+              </button>
+            </div>
+
+            {clinicMode === "create" && (
+              <>
+                <TextField
+                  label="Clinic name"
+                  required
+                  value={clinicName}
+                  onChange={(e) => setClinicName(e.target.value)}
+                  placeholder="e.g. Sanjeevani Clinic"
+                />
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                  <TextField
+                    label="City"
+                    value={clinicCity}
+                    onChange={(e) => setClinicCity(e.target.value)}
+                    placeholder="Hyderabad"
+                  />
+                  <TextField
+                    label="Clinic phone"
+                    value={clinicPhone}
+                    onChange={(e) => setClinicPhone(e.target.value)}
+                    placeholder="+91…"
+                  />
+                </div>
+                <TextAreaField
+                  label="Clinic address"
+                  value={clinicAddress}
+                  onChange={(e) => setClinicAddress(e.target.value)}
+                  rows={2}
+                />
+                <p className="ui-field__hint">
+                  You&rsquo;ll get an invite code to share with your colleagues.
+                </p>
+              </>
+            )}
+
+            {clinicMode === "join" && (
+              <TextField
+                label="Invite code"
+                value={joinCode}
+                onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
+                placeholder="ABC123"
+                hint="Ask a colleague for the code on their Clinic page."
+                style={{ textTransform: "uppercase", letterSpacing: "0.12em" }}
+              />
+            )}
+
+            <button
+              type="button"
+              className="link-quiet"
+              onClick={() => setClinicMode("skip")}
+            >
+              Skip for now — I&rsquo;ll set this up later
+            </button>
+            {clinicMode === "skip" && (
+              <p className="ui-field__hint">
+                You can create or join a clinic any time from the Clinic page.
+              </p>
+            )}
+          </div>
+        )}
+
+        {step === 3 && (
+          <div className="onb-pane" key="s3">
             <dl className="onb-review" style={{ margin: 0 }}>
               <div>
                 <dt>Name</dt>
@@ -172,10 +304,21 @@ export function RegisterProfilePage() {
                 <dt>Practice address</dt>
                 <dd>{address.trim() || "—"}</dd>
               </div>
+              <div>
+                <dt>Clinic</dt>
+                <dd>
+                  {clinicMode === "create"
+                    ? clinicName.trim() || "—"
+                    : clinicMode === "join"
+                      ? `Joining ${joinCode.trim() || "—"}`
+                      : "Set up later"}
+                </dd>
+              </div>
             </dl>
             <p className="muted" style={{ fontSize: "0.86rem" }}>
-              Your profile is reviewed by an administrator before you can start
-              documenting consultations. You&rsquo;ll be notified here once approved.
+              You&rsquo;re all set — no approval needed. Creating a clinic makes you its
+              admin, so you&rsquo;ll see every consultation in it; joining one with a code
+              shows you the records you create.
             </p>
             {error && <p className="ui-field__error">{error}</p>}
           </div>
@@ -195,7 +338,7 @@ export function RegisterProfilePage() {
               Sign out
             </Button>
           )}
-          {step < 2 ? (
+          {step < STEP_COUNT - 1 ? (
             <Button
               variant="primary"
               onClick={() => setStep(step + 1)}
@@ -209,7 +352,7 @@ export function RegisterProfilePage() {
               onClick={() => void handleSubmit()}
               loading={submitting}
             >
-              Submit for approval
+              Finish setup
             </Button>
           )}
         </div>

@@ -91,7 +91,10 @@ export function DashboardPage() {
   const { doctor } = useAuth();
   const navigate = useNavigate();
   const recents = useMemo<RecentSession[]>(
-    () => (doctor ? getRecentSessions(doctor.id) : []),
+    // Discarded sessions are soft-deleted — keep them out of the listing, the
+    // same way the backend hides them from its own queries.
+    () =>
+      doctor ? getRecentSessions(doctor.id).filter((s) => s.status !== "discarded") : [],
     [doctor],
   );
   // Shares its cache entry with the Patients page's unfiltered list.

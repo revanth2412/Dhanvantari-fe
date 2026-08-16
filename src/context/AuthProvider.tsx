@@ -13,9 +13,11 @@ import {
 function deriveStatus(session: Session | null, doctor: Doctor | null): AuthStatus {
   if (!session) return "unauthenticated";
   if (!doctor) return "unregistered";
-  if (doctor.approval_status === "approved" && doctor.active) return "approved";
-  if (doctor.approval_status === "rejected" || !doctor.active) return "rejected";
-  return "pending";
+  // Signup is auto-approved; `active` is the only global gate an admin controls.
+  if (!doctor.active) return "revoked";
+  // Every clinical route needs a selected clinic (403 "select or create a clinic first").
+  if (!doctor.clinic_id) return "no_clinic";
+  return "approved";
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {

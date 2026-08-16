@@ -6,7 +6,8 @@ import { FullScreenLoader } from "@/components/ui/EcgLoader";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { LoginPage } from "@/pages/LoginPage";
 import { RegisterProfilePage } from "@/pages/RegisterProfilePage";
-import { PendingApprovalPage } from "@/pages/PendingApprovalPage";
+import { AccessRevokedPage } from "@/pages/AccessRevokedPage";
+import { SelectClinicPage } from "@/pages/SelectClinicPage";
 
 // Approved-area pages are code-split — auth screens load instantly, the
 // workspace loads on demand.
@@ -35,6 +36,9 @@ const AdminPage = lazy(() =>
 const ProfilePage = lazy(() =>
   import("@/pages/ProfilePage").then((m) => ({ default: m.ProfilePage })),
 );
+const ClinicPage = lazy(() =>
+  import("@/pages/ClinicPage").then((m) => ({ default: m.ClinicPage })),
+);
 
 /** The single place each auth status is allowed to be. */
 function homePathFor(status: AuthStatus): string {
@@ -43,9 +47,10 @@ function homePathFor(status: AuthStatus): string {
       return "/login";
     case "unregistered":
       return "/register-profile";
-    case "pending":
-    case "rejected":
-      return "/pending";
+    case "revoked":
+      return "/access-revoked";
+    case "no_clinic":
+      return "/select-clinic";
     case "approved":
       return "/";
     default:
@@ -109,12 +114,22 @@ export default function App() {
           }
         />
         <Route
-          path="/pending"
+          path="/access-revoked"
           element={
             <RouteFor
-              allow={["pending", "rejected"]}
+              allow={["revoked"]}
               status={status}
-              element={<PendingApprovalPage />}
+              element={<AccessRevokedPage />}
+            />
+          }
+        />
+        <Route
+          path="/select-clinic"
+          element={
+            <RouteFor
+              allow={["no_clinic"]}
+              status={status}
+              element={<SelectClinicPage />}
             />
           }
         />
@@ -127,6 +142,7 @@ export default function App() {
           <Route index element={<WorkspaceHome />} />
           <Route path="dashboard" element={<DashboardPage />} />
           <Route path="profile" element={<ProfilePage />} />
+          <Route path="clinic" element={<ClinicPage />} />
           <Route path="patients" element={<PatientsPage />} />
           <Route path="patients/:patientId" element={<PatientDetailPage />} />
           <Route path="consultations/new" element={<NewConsultationPage />} />

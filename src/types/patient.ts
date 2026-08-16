@@ -28,6 +28,8 @@ export interface Patient {
   gender: string | null;
   language_pref: string | null;
   do_not_call: boolean;
+  /** Clinic that owns this patient — the backend scopes every read to it. */
+  clinic_id: string | null;
   social_history: SocialHistory;
   created_at: string;
 }

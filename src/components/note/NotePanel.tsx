@@ -34,6 +34,7 @@ import {
   Plus,
   Stethoscope,
   Thermometer,
+  Trash2,
   User,
   Users,
   Utensils,
@@ -301,6 +302,8 @@ interface NotePanelProps {
   patientName?: string | null;
   onBack: () => void;
   onShowTranscript: () => void;
+  /** Omitted once the note is finalized — signed records can't be discarded. */
+  onDiscard?: () => void;
   onFinalized: () => void;
 }
 
@@ -310,6 +313,7 @@ export function NotePanel({
   patientName,
   onBack,
   onShowTranscript,
+  onDiscard,
   onFinalized,
 }: NotePanelProps) {
   const { doctor } = useAuth();
@@ -564,6 +568,16 @@ export function NotePanel({
           </Button>
           {!isFinal && !editing && (
             <>
+              {onDiscard && (
+                <Button
+                  size="sm"
+                  variant="danger-soft"
+                  onClick={onDiscard}
+                  title="Discard this consultation"
+                >
+                  <Trash2 size={14} /> Discard
+                </Button>
+              )}
               <Button size="sm" onClick={startEdit}>
                 <Pencil size={14} /> Edit note
               </Button>

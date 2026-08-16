@@ -10,6 +10,9 @@ export interface Doctor {
   specialty: string | null;
   registration_no: string | null;
   address: string | null;
+  /** Clinic the doctor belongs to; null until they create or join one. */
+  clinic_id: string | null;
+  clinic_name: string | null;
   active: boolean;
   role: Role;
   approval_status: ApprovalStatus;

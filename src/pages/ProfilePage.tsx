@@ -50,12 +50,18 @@ export function ProfilePage() {
   useEffect(() => {
     if (!doctor) return;
     hydrate(doctor);
-    void getDoctor(doctor.id).then(hydrate).catch(() => undefined);
+    void getDoctor(doctor.id)
+      .then(hydrate)
+      .catch(() => undefined);
   }, [doctor]);
 
   async function saveProfile() {
     if (!doctor || fullName.trim().length < 2) {
-      toast({ kind: "error", title: "Name is required", message: "Enter at least two characters." });
+      toast({
+        kind: "error",
+        title: "Name is required",
+        message: "Enter at least two characters.",
+      });
       return;
     }
     setSaving(true);
@@ -69,9 +75,17 @@ export function ProfilePage() {
       });
       hydrate(updated);
       await refreshProfile();
-      toast({ kind: "success", title: "Profile updated", message: "Your practice details are saved." });
+      toast({
+        kind: "success",
+        title: "Profile updated",
+        message: "Your practice details are saved.",
+      });
     } catch (err) {
-      toast({ kind: "error", title: "Could not update profile", message: err instanceof Error ? err.message : undefined });
+      toast({
+        kind: "error",
+        title: "Could not update profile",
+        message: err instanceof Error ? err.message : undefined,
+      });
     } finally {
       setSaving(false);
     }
@@ -82,40 +96,131 @@ export function ProfilePage() {
       <header className="profile-hero">
         <div className="profile-hero__aurora" aria-hidden />
         <div className="profile-hero__top">
-          <Button variant="ghost" size="sm" onClick={() => navigate(-1)}><ArrowLeft size={15} /> Back</Button>
-          <Badge tone="ok" dot>Profile active</Badge>
+          <Button variant="ghost" size="sm" onClick={() => navigate(-1)}>
+            <ArrowLeft size={15} /> Back
+          </Button>
+          <Badge tone="ok" dot>
+            Profile active
+          </Badge>
         </div>
         <div className="profile-hero__identity">
-          <div className="profile-avatar-wrap"><Avatar name={profile?.full_name} size={72} /><span><BadgeCheck size={17} /></span></div>
+          <div className="profile-avatar-wrap">
+            <Avatar name={profile?.full_name} size={72} />
+            <span>
+              <BadgeCheck size={17} />
+            </span>
+          </div>
           <div>
-            <p className="profile-hero__eyebrow"><Sparkles size={14} /> Professional settings</p>
+            <p className="profile-hero__eyebrow">
+              <Sparkles size={14} /> Professional settings
+            </p>
             <h1>{profile?.full_name ?? "My profile"}</h1>
-            <p>{profile?.specialty ?? "Add your specialty"} <i>·</i> {profile?.registration_no ?? "Registration not added"}</p>
+            <p>
+              {profile?.specialty ?? "Add your specialty"} <i>·</i>{" "}
+              {profile?.registration_no ?? "Registration not added"}
+            </p>
           </div>
         </div>
       </header>
 
       <div className="profile-layout">
         <aside className="profile-summary ui-card">
-          <div className="profile-summary__heading"><ShieldCheck size={18} /><span>Account status</span></div>
-          <div className="profile-summary__state"><span className="profile-summary__pulse" /><div><strong>{profile?.approval_status === "approved" ? "Verified clinician" : "Account pending"}</strong><small>{profile?.active ? "Workspace access enabled" : "Access is currently restricted"}</small></div></div>
-          <div className="profile-summary__facts">
-            <div><Mail size={15} /><span><small>Email</small>{profile?.email ?? "—"}</span></div>
-            <div><Building2 size={15} /><span><small>Role</small>{profile?.role === "admin" ? "Administrator" : "Doctor"}</span></div>
+          <div className="profile-summary__heading">
+            <ShieldCheck size={18} />
+            <span>Account status</span>
           </div>
-          <p className="profile-summary__note">Your email and access controls are protected account settings. Contact an administrator to change them.</p>
+          <div className="profile-summary__state">
+            <span className="profile-summary__pulse" />
+            <div>
+              <strong>
+                {profile?.approval_status === "approved"
+                  ? "Verified clinician"
+                  : "Account pending"}
+              </strong>
+              <small>
+                {profile?.active
+                  ? "Workspace access enabled"
+                  : "Access is currently restricted"}
+              </small>
+            </div>
+          </div>
+          <div className="profile-summary__facts">
+            <div>
+              <Mail size={15} />
+              <span>
+                <small>Email</small>
+                {profile?.email ?? "—"}
+              </span>
+            </div>
+            <div>
+              <Building2 size={15} />
+              <span>
+                <small>Role</small>
+                {profile?.role === "admin" ? "Administrator" : "Doctor"}
+              </span>
+            </div>
+          </div>
+          <p className="profile-summary__note">
+            Your email and access controls are protected account settings. Contact an
+            administrator to change them.
+          </p>
         </aside>
 
         <section className="profile-settings ui-card ui-card--pad">
-          <div className="profile-settings__head"><div><h2>Practice details</h2><p>These details appear across your clinical workspace.</p></div><Stethoscope className="profile-settings__icon" size={22} /></div>
-          <div className="profile-form">
-            <TextField label="Full name" required value={fullName} onChange={(e) => setFullName(e.target.value)} icon={<UserRound size={16} />} />
-            <TextField label="Phone number" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+91 98765 43210" icon={<Phone size={16} />} />
-            <TextField label="Specialty" value={specialty} onChange={(e) => setSpecialty(e.target.value)} placeholder="e.g. General Medicine" icon={<Stethoscope size={16} />} />
-            <TextField label="Medical registration no." value={registrationNo} onChange={(e) => setRegistrationNo(e.target.value)} placeholder="e.g. KMC/12345" icon={<BadgeCheck size={16} />} />
-            <div className="profile-form__wide"><TextAreaField label="Practice address" value={address} onChange={(e) => setAddress(e.target.value)} rows={3} placeholder="Clinic / hospital address" /></div>
+          <div className="profile-settings__head">
+            <div>
+              <h2>Practice details</h2>
+              <p>These details appear across your clinical workspace.</p>
+            </div>
+            <Stethoscope className="profile-settings__icon" size={22} />
           </div>
-          <div className="profile-card__actions"><span><MapPin size={15} /> Saved securely to your clinician profile</span><Button variant="primary" loading={saving} onClick={() => void saveProfile()}><Save size={16} /> Save changes</Button></div>
+          <div className="profile-form">
+            <TextField
+              label="Full name"
+              required
+              value={fullName}
+              onChange={(e) => setFullName(e.target.value)}
+              icon={<UserRound size={16} />}
+            />
+            <TextField
+              label="Phone number"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              placeholder="+91 98765 43210"
+              icon={<Phone size={16} />}
+            />
+            <TextField
+              label="Specialty"
+              value={specialty}
+              onChange={(e) => setSpecialty(e.target.value)}
+              placeholder="e.g. General Medicine"
+              icon={<Stethoscope size={16} />}
+            />
+            <TextField
+              label="Medical registration no."
+              value={registrationNo}
+              onChange={(e) => setRegistrationNo(e.target.value)}
+              placeholder="e.g. KMC/12345"
+              icon={<BadgeCheck size={16} />}
+            />
+            <div className="profile-form__wide">
+              <TextAreaField
+                label="Practice address"
+                value={address}
+                onChange={(e) => setAddress(e.target.value)}
+                rows={3}
+                placeholder="Clinic / hospital address"
+              />
+            </div>
+          </div>
+          <div className="profile-card__actions">
+            <span>
+              <MapPin size={15} /> Saved securely to your clinician profile
+            </span>
+            <Button variant="primary" loading={saving} onClick={() => void saveProfile()}>
+              <Save size={16} /> Save changes
+            </Button>
+          </div>
         </section>
       </div>
     </main>
