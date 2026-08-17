@@ -1,0 +1,505 @@
+/* ==========================================================================
+   CLINIC (`cl-*`)
+   A doctor can practise at several clinics, so which one you're in — and
+   moving between them — is the first thing on the page, not a dialog.
+   ========================================================================== */
+
+.cl {
+  max-width: 1240px;
+}
+
+/* ---------- clinic switcher rail ---------- */
+.cl-switch {
+  margin-bottom: 20px;
+}
+.cl-switch__rail {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  padding: 2px 2px 6px;
+  scrollbar-width: none;
+  scroll-snap-type: x proximity;
+}
+.cl-switch__rail::-webkit-scrollbar {
+  display: none;
+}
+
+.cl-chip {
+  position: relative;
+  flex: 0 0 auto;
+  scroll-snap-align: start;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 208px;
+  max-width: 280px;
+  padding: 10px 14px;
+  border-radius: var(--r-lg);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color var(--dur-fast) var(--ease-out),
+    box-shadow var(--dur-fast) var(--ease-out),
+    transform var(--dur-fast) var(--ease-spring),
+    background var(--dur-fast) var(--ease-out);
+}
+.cl-chip:hover:not(:disabled) {
+  border-color: rgba(32, 201, 151, 0.45);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-2);
+}
+.cl-chip:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.cl-chip__icon {
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  border-radius: var(--r-md);
+  display: grid;
+  place-items: center;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  color: var(--muted);
+}
+.cl-chip__text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.cl-chip__text b {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cl-chip__text small {
+  font-size: 0.74rem;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cl-chip__role {
+  flex-shrink: 0;
+  padding: 2px 8px;
+  border-radius: var(--r-full);
+  background: var(--accent-soft, #fdf1dc);
+  color: #8a5a12;
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+/* The clinic you're working in right now. */
+.cl-chip--on {
+  cursor: default;
+  border-color: rgba(32, 201, 151, 0.55);
+  background: linear-gradient(150deg, var(--green-50), var(--surface) 70%);
+  box-shadow: inset 0 0 0 1px rgba(32, 201, 151, 0.25);
+}
+.cl-chip--on .cl-chip__icon {
+  background: linear-gradient(135deg, var(--green-600), var(--green-800));
+  border-color: transparent;
+  color: #fff;
+}
+.cl-chip--on::after {
+  content: "";
+  position: absolute;
+  left: 14px;
+  right: 14px;
+  bottom: 5px;
+  height: 2px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--green-500), var(--green-700));
+}
+
+/* Membership revoked, or the whole clinic suspended — visible, not hidden. */
+.cl-chip--blocked {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.cl-chip--blocked .cl-chip__text small {
+  color: var(--danger);
+  font-weight: 600;
+}
+
+.cl-chip--add {
+  min-width: 178px;
+  border-style: dashed;
+  background: transparent;
+}
+.cl-chip--add .cl-chip__icon {
+  background: var(--green-50);
+  border-color: rgba(34, 201, 157, 0.35);
+  color: var(--green-700);
+}
+
+.cl-chip__spin {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: rgba(255, 255, 255, 0.6);
+}
+.cl-chip__spin::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 18px;
+  height: 18px;
+  margin: -9px 0 0 -9px;
+  border-radius: 50%;
+  border: 2px solid rgba(18, 138, 109, 0.25);
+  border-top-color: var(--green-700);
+  animation: spin 0.7s linear infinite;
+}
+
+/* ---------- masthead ---------- */
+.cl-top {
+  padding-bottom: 20px;
+  margin-bottom: 20px;
+  border-bottom: 1px solid var(--border);
+}
+.cl-id {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.cl-id__mark {
+  width: 54px;
+  height: 54px;
+  flex-shrink: 0;
+  border-radius: var(--r-lg);
+  display: grid;
+  place-items: center;
+  color: #fff;
+  background: linear-gradient(140deg, var(--green-600), var(--green-800));
+  box-shadow: 0 12px 26px -14px rgba(18, 114, 90, 0.9);
+}
+.cl-id__text {
+  flex: 1;
+  min-width: 0;
+}
+.cl-id__text h1 {
+  font-family: var(--font-display);
+  font-size: clamp(1.5rem, 3vw, 2rem);
+  font-weight: 800;
+  letter-spacing: -0.035em;
+  line-height: 1.06;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.cl-id__meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 6px 0 0;
+  font-size: 0.83rem;
+  color: var(--muted);
+}
+.cl-id__meta i {
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: var(--border-strong);
+}
+.cl-mono {
+  font-family: var(--font-mono);
+  font-size: 0.92em;
+}
+.cl-id__actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+/* ---------- invite code as a tear-off ticket ---------- */
+.cl-ticket {
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+  width: fit-content;
+  max-width: 100%;
+  margin-top: 16px;
+  border-radius: var(--r-md);
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
+  overflow: hidden;
+}
+.cl-ticket__stub {
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  background: var(--surface-2);
+  border-right: 1px dashed var(--border-strong);
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+.cl-ticket code {
+  display: flex;
+  align-items: center;
+  padding: 10px 16px;
+  font-family: var(--font-mono);
+  font-size: 1.02rem;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  color: var(--ink);
+}
+.cl-ticket button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 14px;
+  border: none;
+  border-left: 1px solid var(--border);
+  background: var(--surface-2);
+  font-family: inherit;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--green-800);
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out);
+}
+.cl-ticket button:hover {
+  background: var(--green-50);
+}
+.cl-ticket--lg {
+  width: 100%;
+  margin-top: 0;
+}
+.cl-ticket--lg code {
+  flex: 1;
+  justify-content: center;
+  font-size: 1.3rem;
+}
+
+/* ---------- facts + numbers ---------- */
+.cl-facts {
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.35fr);
+  gap: 26px;
+  align-items: start;
+  margin-bottom: 22px;
+}
+.cl-facts__list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 0;
+}
+.cl-facts__list div {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+}
+.cl-facts__list dt {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  flex-shrink: 0;
+  width: 92px;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+.cl-facts__list dd {
+  margin: 0;
+  font-size: 0.88rem;
+  color: var(--ink-2);
+  overflow-wrap: anywhere;
+}
+
+/* Numbers set as type, not four more cards. */
+.cl-nums {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 18px;
+  padding-left: 26px;
+  border-left: 1px solid var(--border);
+}
+.cl-nums div {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.cl-nums strong {
+  font-family: var(--font-display);
+  font-size: 1.7rem;
+  font-weight: 800;
+  letter-spacing: -0.035em;
+  line-height: 1;
+  color: var(--ink);
+}
+.cl-nums span {
+  margin-top: 5px;
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: var(--ink-2);
+}
+.cl-nums small {
+  font-size: 0.7rem;
+  color: var(--faint);
+  overflow-wrap: anywhere;
+}
+
+/* ---------- member-only note ---------- */
+.cl-member-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+}
+.cl-member-note svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+  color: var(--green-600);
+}
+.cl-member-note p {
+  margin: 3px 0 0;
+  font-size: 0.87rem;
+  line-height: 1.5;
+}
+
+/* ---------- tabs ---------- */
+.cl-tabs {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 14px;
+  padding: 4px;
+  width: fit-content;
+  max-width: 100%;
+  overflow-x: auto;
+  scrollbar-width: none;
+  border-radius: var(--r-full);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+}
+.cl-tabs::-webkit-scrollbar {
+  display: none;
+}
+.cl-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  flex-shrink: 0;
+  padding: 7px 16px;
+  border: none;
+  border-radius: var(--r-full);
+  background: transparent;
+  font-family: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--muted);
+  cursor: pointer;
+  transition:
+    background var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out),
+    box-shadow var(--dur-fast) var(--ease-out);
+}
+.cl-tab:hover {
+  color: var(--ink);
+}
+.cl-tab span {
+  padding: 1px 7px;
+  border-radius: var(--r-full);
+  background: var(--surface-3);
+  font-size: 0.7rem;
+  color: var(--muted);
+}
+.cl-tab--on {
+  background: var(--surface);
+  color: var(--green-800);
+  box-shadow: var(--shadow-1);
+}
+.cl-tab--on span {
+  background: var(--green-50);
+  color: var(--green-800);
+}
+
+.cl-panel {
+  overflow: hidden;
+}
+.cl-foot {
+  padding: 12px 18px 14px;
+  margin-top: 0;
+}
+
+/* ==========================================================================
+   PHONE / TABLET
+   ========================================================================== */
+@media (max-width: 980px) {
+  .cl-facts {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+  .cl-nums {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    padding-left: 0;
+    border-left: none;
+    padding-top: 18px;
+    border-top: 1px solid var(--border);
+  }
+}
+
+@media (max-width: 820px) {
+  .cl-switch__rail {
+    /* Bleed to the screen edges so the rail reads as swipeable. */
+    margin: 0 -14px;
+    padding: 2px 14px 8px;
+  }
+  .cl-chip {
+    min-width: 180px;
+  }
+  .cl-id {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .cl-id__mark {
+    width: 44px;
+    height: 44px;
+  }
+  .cl-id__text h1 {
+    font-size: 1.35rem;
+  }
+  .cl-id__actions {
+    flex-basis: 100%;
+  }
+  .cl-id__actions .ui-btn {
+    flex: 1;
+    justify-content: center;
+  }
+  .cl-ticket {
+    width: 100%;
+  }
+  .cl-ticket code {
+    flex: 1;
+    padding: 10px 12px;
+    font-size: 0.92rem;
+    letter-spacing: 0.16em;
+  }
+  .cl-facts__list dt {
+    width: 78px;
+  }
+  .cl-tabs {
+    width: 100%;
+  }
+  .cl-tab {
+    flex: 1;
+    justify-content: center;
+    padding: 8px 10px;
+  }
+}

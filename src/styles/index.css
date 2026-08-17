@@ -4,8 +4,14 @@
 @import "./base.css";
 @import "./components.css";
 @import "./layout.css";
+@import "./auth.css";
+@import "./profile.css";
+@import "./clinic.css";
 @import "./pages.css";
 /* landing.css is imported here so it ships in the main CSS bundle.
    The landing page is the default route for unauthenticated visitors,
    so lazy-splitting it only causes an unstyled flash on first load. */
 @import "./landing.css";
+/* Phone-only landing tree (`ml-*`). Same reasoning as above: in the entry
+   bundle so the public page never paints unstyled. */
+@import "./landing-mobile.css";

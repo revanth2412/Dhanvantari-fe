@@ -12,7 +12,6 @@ import {
   Mic,
   Radio,
   Search,
-  ShieldCheck,
   Sparkles,
   Stethoscope,
   TrendingUp,
@@ -299,18 +298,6 @@ export function DashboardPage() {
                 <ChevronRight size={12} />
               </div>
             </div>
-          </div>
-        </div>
-
-        <div className="db-telemetry-center">
-          {/* On a phone this collapses to the shield alone — the title keeps
-              the meaning reachable. */}
-          <div
-            className="db-security-badge"
-            title="DPDP Act 2023 enforced · Data encryption active"
-          >
-            <ShieldCheck size={13} className="db-icon-emerald" />
-            <span>DPDP Act 2023 Enforced · Data Encryption Active</span>
           </div>
         </div>
 

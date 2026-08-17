@@ -8,6 +8,7 @@
 
 export type HapticPattern =
   | "selection" // moving between tabs / options
+  | "bubble" // tight, springy tap — nav bubbles, chips, carousel dots
   | "light" // ordinary tap
   | "medium" // committing an action
   | "heavy" // starting/stopping a recording
@@ -18,6 +19,8 @@ export type HapticPattern =
 /** Durations in ms; arrays alternate vibrate/pause. */
 const PATTERNS: Record<HapticPattern, number | number[]> = {
   selection: 8,
+  // Short–gap–shorter: reads as a pop with a bounce rather than one buzz.
+  bubble: [9, 22, 5],
   light: 12,
   medium: 20,
   heavy: 32,

@@ -1,139 +1,6 @@
 /* App shell (auto-collapsing sidebar) and the auth split-screen layout. */
 
-/* ================= Auth layout ================= */
-.auth-split {
-  min-height: 100%;
-  display: grid;
-  grid-template-columns: minmax(420px, 44%) 1fr;
-}
-@media (max-width: 900px) {
-  .auth-split {
-    grid-template-columns: 1fr;
-  }
-  .auth-split__brand {
-    display: none;
-  }
-}
-
-.auth-split__brand {
-  position: relative;
-  background: var(--grad-brand-deep);
-  color: #e9f5f0;
-  padding: 48px;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  overflow: hidden;
-}
-.auth-split__brand::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background:
-    radial-gradient(600px 420px at 85% -10%, rgba(34, 201, 157, 0.16), transparent 60%),
-    radial-gradient(520px 380px at -10% 110%, rgba(232, 155, 46, 0.1), transparent 60%);
-  pointer-events: none;
-}
-.auth-orb {
-  position: absolute;
-  border-radius: 50%;
-  filter: blur(70px);
-  opacity: 0.5;
-  animation: float-slow 14s ease-in-out infinite;
-  pointer-events: none;
-}
-.auth-orb--jade {
-  width: 340px;
-  height: 340px;
-  background: rgba(18, 138, 109, 0.55);
-  top: 12%;
-  right: -80px;
-}
-.auth-orb--saffron {
-  width: 260px;
-  height: 260px;
-  background: rgba(232, 155, 46, 0.28);
-  bottom: 8%;
-  left: -60px;
-  animation-delay: -7s;
-}
-
-.auth-brand-row {
-  position: relative;
-  z-index: 1;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  font-family: var(--font-display);
-  font-weight: 700;
-  font-size: 1.15rem;
-  letter-spacing: -0.01em;
-}
-
-.auth-hero {
-  position: relative;
-  z-index: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-  max-width: 460px;
-}
-.auth-hero h1 {
-  color: #f4faf8;
-  font-size: clamp(1.9rem, 2.6vw, 2.6rem);
-  line-height: 1.15;
-}
-.auth-hero p {
-  color: rgba(233, 245, 240, 0.72);
-  font-size: 1rem;
-  line-height: 1.6;
-}
-.auth-hero__points {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  margin-top: 6px;
-}
-.auth-point {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  font-size: 0.92rem;
-  color: rgba(233, 245, 240, 0.86);
-}
-.auth-point__icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 34px;
-  height: 34px;
-  border-radius: 10px;
-  background: rgba(34, 201, 157, 0.12);
-  color: var(--green-400);
-  border: 1px solid rgba(34, 201, 157, 0.25);
-  flex-shrink: 0;
-}
-.auth-foot {
-  position: relative;
-  z-index: 1;
-  font-size: 0.8rem;
-  color: rgba(233, 245, 240, 0.45);
-}
-
-.auth-split__form {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 40px 24px;
-}
-.auth-form-card {
-  width: 100%;
-  max-width: 400px;
-}
-.auth-form-card > h2 {
-  font-size: 1.5rem;
-  margin-bottom: 4px;
-}
+/* Auth screens now live in auth.css (`au-*`). */
 
 /* Centered narrow layouts (pending / onboarding) */
 .center-screen {
@@ -490,9 +357,9 @@
     padding: calc(16px + var(--safe-top)) 14px
       calc(var(--tabbar-h) + var(--safe-bottom) + 40px);
   }
-  /* Auth / onboarding screens sit outside the shell — inset them too. */
-  .center-screen,
-  .auth-split__form {
+  /* Onboarding screens sit outside the shell — inset them too. (The auth
+     screens handle their own insets in auth.css.) */
+  .center-screen {
     padding: calc(24px + var(--safe-top)) 16px calc(24px + var(--safe-bottom));
   }
   .page-head h1 {

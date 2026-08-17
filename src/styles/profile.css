@@ -1,0 +1,446 @@
+/* ==========================================================================
+   PROFILE (`pf-*`)
+   The page is built around the letterhead: these fields are what gets printed
+   and signed, so the sheet is the subject and the form sits beside it.
+   ========================================================================== */
+
+.pf {
+  max-width: 1180px;
+  padding-bottom: 96px;
+}
+
+/* Transform-only entrance: if the tween never runs, everything is still here. */
+@keyframes pf-rise {
+  from {
+    transform: translateY(18px);
+  }
+  to {
+    transform: none;
+  }
+}
+
+/* ---------- masthead ---------- */
+.pf-top {
+  margin-bottom: 26px;
+}
+.pf-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0;
+  margin-bottom: 18px;
+  border: none;
+  background: none;
+  font-family: inherit;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--muted);
+  cursor: pointer;
+  transition: color var(--dur-fast) var(--ease-out);
+}
+.pf-back:hover {
+  color: var(--green-700);
+}
+
+.pf-id {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding-bottom: 22px;
+  /* A hairline instead of a card: the name is the header, not a panel. */
+  border-bottom: 1px solid var(--border);
+}
+
+.pf-id__face {
+  position: relative;
+  flex-shrink: 0;
+}
+.pf-seal {
+  position: absolute;
+  right: -3px;
+  bottom: -3px;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  background: linear-gradient(135deg, var(--green-500), var(--green-700));
+  border: 2.5px solid var(--bg);
+  box-shadow: 0 6px 14px -6px rgba(18, 114, 90, 0.9);
+}
+
+.pf-id__text {
+  flex: 1;
+  min-width: 0;
+}
+.pf-id__text h1 {
+  font-family: var(--font-display);
+  font-size: clamp(1.6rem, 3.2vw, 2.15rem);
+  font-weight: 800;
+  letter-spacing: -0.035em;
+  line-height: 1.05;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.pf-id__meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 7px 0 0;
+  font-size: 0.84rem;
+  color: var(--muted);
+}
+.pf-id__meta i {
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: var(--border-strong);
+}
+.pf-mono {
+  font-family: var(--font-mono);
+  font-size: 0.92em;
+}
+
+.pf-account {
+  display: flex;
+  gap: 26px;
+  margin: 0;
+  flex-shrink: 0;
+}
+.pf-account dt {
+  font-size: 0.64rem;
+  font-weight: 800;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+  color: var(--faint);
+  margin-bottom: 3px;
+}
+.pf-account dd {
+  margin: 0;
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: var(--ink-2);
+  overflow-wrap: anywhere;
+}
+
+/* ---------- two-up body ---------- */
+.pf-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+  gap: 34px;
+  align-items: start;
+}
+.pf-kicker {
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--faint);
+  margin: 0 0 12px;
+}
+.pf-preview {
+  position: sticky;
+  top: 18px;
+}
+
+/* ---------- the letterhead ---------- */
+.pf-sheet {
+  position: relative;
+  padding: 30px 30px 22px;
+  border-radius: 4px 4px 14px 14px;
+  background: #fff;
+  border: 1px solid var(--border);
+  box-shadow:
+    0 1px 0 rgba(11, 61, 48, 0.05),
+    0 30px 60px -34px rgba(11, 61, 48, 0.55);
+  transform-style: preserve-3d;
+  transition: box-shadow var(--dur-med) var(--ease-out);
+}
+.pf-sheet:hover {
+  box-shadow:
+    0 1px 0 rgba(11, 61, 48, 0.05),
+    0 40px 70px -34px rgba(11, 61, 48, 0.6);
+}
+/* The green band across the top of a real printed letterhead. */
+.pf-sheet__rule {
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 5px;
+  border-radius: 4px 4px 0 0;
+  background: linear-gradient(90deg, var(--green-700), var(--green-400) 55%, #e8a13a);
+}
+
+.pf-sheet__head {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+}
+.pf-sheet__head strong {
+  font-family: var(--font-display);
+  font-size: 1.32rem;
+  font-weight: 800;
+  letter-spacing: -0.025em;
+  color: var(--ink);
+}
+.pf-sheet__head span {
+  font-size: 0.88rem;
+  color: var(--green-800);
+}
+.pf-sheet__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 18px;
+  margin-top: 6px;
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+.pf-sheet__addr {
+  margin: 10px 0 0;
+  padding-top: 12px;
+  border-top: 1px dashed var(--border);
+  font-size: 0.82rem;
+  line-height: 1.5;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+
+/* Any line can flash when the field behind it is edited. */
+.pf-line {
+  border-radius: 5px;
+  transition:
+    background var(--dur-med) var(--ease-out),
+    color var(--dur-med) var(--ease-out),
+    box-shadow var(--dur-med) var(--ease-out);
+}
+.pf-line--hot {
+  background: var(--green-50);
+  color: var(--green-800);
+  box-shadow:
+    0 0 0 5px var(--green-50),
+    inset 0 0 0 1px rgba(34, 201, 157, 0.28);
+}
+
+/* The blank body of the script — implied, never filled in. */
+.pf-sheet__rx {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 12px 14px;
+  align-items: center;
+  margin: 22px 0 26px;
+}
+.pf-sheet__rxmark {
+  grid-row: 1 / span 3;
+  align-self: start;
+  font-family: var(--font-display);
+  font-size: 1.9rem;
+  font-weight: 700;
+  line-height: 1;
+  color: rgba(18, 138, 109, 0.32);
+}
+.pf-sheet__rx span:not(.pf-sheet__rxmark) {
+  height: 1px;
+  background: repeating-linear-gradient(
+    90deg,
+    var(--border) 0 22px,
+    transparent 22px 30px
+  );
+}
+.pf-sheet__rx span:nth-child(3) {
+  width: 82%;
+}
+.pf-sheet__rx span:nth-child(4) {
+  width: 58%;
+}
+
+.pf-sheet__sign {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 5px;
+}
+.pf-sheet__signline {
+  width: 150px;
+  height: 1px;
+  background: var(--border-strong);
+}
+.pf-sheet__sign small {
+  font-size: 0.68rem;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+
+/* ---------- clinic link ---------- */
+.pf-clinic {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  margin-top: 16px;
+  padding: 13px 16px;
+  border-radius: var(--r-lg);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--ink-2);
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color var(--dur-fast) var(--ease-out),
+    transform var(--dur-fast) var(--ease-out),
+    box-shadow var(--dur-fast) var(--ease-out);
+}
+.pf-clinic:hover {
+  border-color: rgba(32, 201, 151, 0.45);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-2);
+}
+.pf-clinic svg:first-child {
+  color: var(--green-600);
+  flex-shrink: 0;
+}
+.pf-clinic span {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+.pf-clinic b {
+  font-size: 0.92rem;
+  color: var(--ink);
+}
+
+/* ---------- form ---------- */
+.pf-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.pf-form__pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.pf-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  margin: 2px 0 0;
+  font-size: 0.78rem;
+  line-height: 1.5;
+  color: var(--faint);
+}
+.pf-note svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+/* ---------- save bar: only when there's something to save ---------- */
+.pf-bar {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 10px 9px 18px;
+  border-radius: var(--r-full);
+  background: rgba(255, 255, 255, 0.94);
+  border: 1px solid rgba(18, 138, 109, 0.2);
+  box-shadow: 0 20px 44px -18px rgba(11, 61, 48, 0.5);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  /* Off-screen and inert until dirty — no ghost bar catching clicks. */
+  transform: translate(-50%, 140%);
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    transform 0.45s cubic-bezier(0.34, 1.4, 0.5, 1),
+    opacity 0.3s var(--ease-out);
+}
+.pf-bar--on {
+  transform: translate(-50%, 0);
+  opacity: 1;
+  pointer-events: auto;
+}
+.pf-bar__text {
+  font-size: 0.83rem;
+  font-weight: 700;
+  color: var(--ink-2);
+  white-space: nowrap;
+}
+
+/* ---------- animation opt-in ---------- */
+@media (prefers-reduced-motion: no-preference) {
+  .pf-top,
+  .pf-preview,
+  .pf-form {
+    animation: pf-rise 0.6s var(--ease-out);
+  }
+}
+
+/* ==========================================================================
+   PHONE / TABLET
+   ========================================================================== */
+@media (max-width: 980px) {
+  .pf-body {
+    grid-template-columns: 1fr;
+    gap: 26px;
+  }
+  .pf-preview {
+    position: static;
+  }
+  .pf-id {
+    flex-wrap: wrap;
+    gap: 14px;
+  }
+  .pf-account {
+    flex-basis: 100%;
+    gap: 22px;
+  }
+}
+
+@media (max-width: 820px) {
+  .pf {
+    padding-bottom: calc(var(--tabbar-h) + var(--safe-bottom) + 96px);
+  }
+  .pf-id {
+    align-items: flex-start;
+  }
+  .pf-id__text h1 {
+    font-size: 1.45rem;
+  }
+  .pf-sheet {
+    padding: 22px 18px 18px;
+  }
+  .pf-sheet__head strong {
+    font-size: 1.15rem;
+  }
+  .pf-sheet__rx {
+    margin: 18px 0 20px;
+  }
+  .pf-form__pair {
+    grid-template-columns: 1fr;
+  }
+  /* Docked above the tab bar rather than floating mid-thumb. */
+  .pf-bar {
+    left: 12px;
+    right: 12px;
+    bottom: calc(var(--tabbar-h) + var(--safe-bottom) + 22px);
+    transform: translateY(140%);
+    padding: 9px 10px;
+  }
+  .pf-bar--on {
+    transform: none;
+  }
+  .pf-bar__text {
+    flex: 1;
+    font-size: 0.78rem;
+  }
+}

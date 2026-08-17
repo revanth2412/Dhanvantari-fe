@@ -1,0 +1,975 @@
+/* ==========================================================================
+   MOBILE LANDING (`ml-*`)
+   A separate experience from the desktop marketing site, not a restyling of
+   it: the desktop tree never mounts below 820px and none of its `mv-*` rules
+   apply here. Deep evergreen ground, one floating nav, and nothing allowed to
+   cross the viewport edge.
+   ========================================================================== */
+
+.ml-root {
+  /* Same evergreen wash as the desktop landing, so the two read as one site. */
+  --ml-surface: rgba(255, 255, 255, 0.76);
+  --ml-line: rgba(18, 138, 109, 0.16);
+  --ml-ink: var(--ink);
+  --ml-ink-2: var(--ink-2);
+  --ml-faint: var(--muted);
+
+  position: relative;
+  min-height: 100vh;
+  width: 100%;
+  max-width: 100vw;
+  /* clip, not hidden: keeps stray decoration off-screen without turning this
+     into a scroll container. */
+  overflow-x: hidden;
+  overflow-x: clip;
+  background: linear-gradient(
+    180deg,
+    #edf8f3 0%,
+    #f4fbf8 25%,
+    #ebf6f1 55%,
+    #f5fcf9 80%,
+    #e8f5ef 100%
+  );
+  background-color: #edf8f3;
+  color: var(--ml-ink);
+  padding-bottom: calc(var(--tabbar-h) + var(--safe-bottom) + 70px);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ---------- ambient depth ---------- */
+.ml-blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(64px);
+  pointer-events: none;
+  z-index: 0;
+}
+.ml-blob--1 {
+  top: -70px;
+  right: -80px;
+  width: 280px;
+  height: 280px;
+  background: rgba(34, 201, 157, 0.34);
+}
+.ml-blob--2 {
+  top: 42vh;
+  left: -100px;
+  width: 250px;
+  height: 250px;
+  background: rgba(232, 155, 46, 0.22);
+}
+
+.ml-root > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* ---------- hero ---------- */
+/* Staggered entrance, in CSS so it can't strand content invisible. */
+@keyframes ml-rise {
+  from {
+    opacity: 0;
+    transform: translateY(26px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.ml-hero [data-rise] {
+  animation: ml-rise 0.7s var(--ease-out) both;
+}
+.ml-hero [data-rise]:nth-child(1) {
+  animation-delay: 0.02s;
+}
+.ml-hero [data-rise]:nth-child(2) {
+  animation-delay: 0.09s;
+}
+.ml-hero [data-rise]:nth-child(3) {
+  animation-delay: 0.16s;
+}
+.ml-hero [data-rise]:nth-child(4) {
+  animation-delay: 0.23s;
+}
+.ml-hero [data-rise]:nth-child(5) {
+  animation-delay: 0.3s;
+}
+.ml-hero [data-rise]:nth-child(6) {
+  animation-delay: 0.37s;
+}
+
+.ml-hero {
+  padding: calc(26px + var(--safe-top)) 20px 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.ml-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 1rem;
+  letter-spacing: -0.01em;
+  color: var(--ml-ink);
+}
+.ml-brand b {
+  color: var(--green-600);
+}
+.ml-brand--sm {
+  font-size: 0.9rem;
+}
+
+.ml-live {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 12px;
+  border-radius: var(--r-full);
+  background: var(--ml-surface);
+  border: 1px solid var(--ml-line);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--green-800);
+}
+.ml-live i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--green-500);
+  box-shadow: 0 0 10px var(--green-400);
+  animation: pulse-dot 1.6s infinite;
+}
+
+.ml-title {
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 8.6vw, 2.7rem);
+  line-height: 1.06;
+  letter-spacing: -0.035em;
+  font-weight: 800;
+  color: var(--ink);
+  margin: 2px 0 0;
+}
+.ml-title__grad {
+  display: block;
+  background: linear-gradient(
+    100deg,
+    var(--green-700) 0%,
+    var(--green-500) 45%,
+    #d98518 100%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.ml-sub {
+  font-size: 0.95rem;
+  line-height: 1.6;
+  color: var(--ml-ink-2);
+  max-width: 34ch;
+}
+
+.ml-cta {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  margin-top: 2px;
+}
+
+.ml-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  height: 50px;
+  padding: 0 20px;
+  border-radius: var(--r-full);
+  font-family: inherit;
+  font-size: 0.94rem;
+  font-weight: 700;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition:
+    transform 0.24s cubic-bezier(0.34, 1.56, 0.64, 1),
+    box-shadow 0.24s ease;
+}
+.ml-btn:active {
+  transform: scale(0.965);
+}
+.ml-btn--primary {
+  background: linear-gradient(135deg, var(--green-600), var(--green-800));
+  color: #fff;
+  box-shadow:
+    0 12px 28px -12px rgba(18, 114, 90, 0.75),
+    inset 0 1px 0 rgba(255, 255, 255, 0.28);
+}
+.ml-btn--ghost {
+  background: rgba(255, 255, 255, 0.88);
+  border-color: rgba(18, 138, 109, 0.26);
+  color: var(--green-800);
+  box-shadow: var(--shadow-1);
+}
+
+/* ---------- floating capture card ---------- */
+.ml-card {
+  width: 100%;
+  margin-top: 8px;
+  padding: 14px;
+  border-radius: 20px;
+  background: linear-gradient(
+    165deg,
+    rgba(255, 255, 255, 0.95),
+    rgba(255, 255, 255, 0.72)
+  );
+  border: 1px solid var(--ml-line);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  box-shadow:
+    0 24px 46px -26px rgba(11, 61, 48, 0.42),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+}
+.ml-card__top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--ml-faint);
+}
+.ml-card__dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--saffron-500, #e89b2e);
+  animation: pulse-dot 1.3s infinite;
+  flex-shrink: 0;
+}
+.ml-card__tag {
+  margin-left: auto;
+  padding: 2px 8px;
+  border-radius: var(--r-full);
+  background: var(--green-50);
+  border: 1px solid rgba(34, 201, 157, 0.4);
+  color: var(--green-800);
+  letter-spacing: 0.04em;
+}
+
+.ml-wave {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  height: 38px;
+  overflow: hidden;
+}
+.ml-wave span {
+  flex: 1;
+  min-width: 0;
+  height: 40%;
+  border-radius: 999px;
+  background: linear-gradient(180deg, var(--green-500), rgba(34, 201, 157, 0.4));
+  transform-origin: center;
+  animation: ml-bar 1.15s ease-in-out infinite alternate;
+}
+@keyframes ml-bar {
+  from {
+    transform: scaleY(0.28);
+    opacity: 0.55;
+  }
+  to {
+    transform: scaleY(1.9);
+    opacity: 1;
+  }
+}
+
+.ml-card__line {
+  font-size: 0.84rem;
+  line-height: 1.5;
+  color: var(--ml-ink-2);
+  margin: 0;
+}
+.ml-card__line b {
+  color: var(--green-700);
+}
+.ml-card__note {
+  font-size: 0.82rem;
+  line-height: 1.5;
+  color: var(--ml-ink);
+  padding: 10px 12px;
+  border-radius: 13px;
+  background: var(--green-50);
+  border: 1px dashed rgba(18, 138, 109, 0.3);
+}
+.ml-card__note-k {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.64rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--green-700);
+  margin-right: 7px;
+}
+.ml-card__note b {
+  font-family: var(--font-mono);
+  color: #a8620d;
+}
+
+/* ---------- section furniture ---------- */
+.ml-tag {
+  display: inline-block;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--green-700);
+  margin-bottom: 8px;
+}
+.ml-tag--center {
+  display: block;
+  text-align: center;
+}
+
+.ml-steps h2,
+.ml-try h2,
+.ml-why h2,
+.ml-close h2 {
+  font-family: var(--font-display);
+  font-size: clamp(1.5rem, 6.4vw, 1.95rem);
+  line-height: 1.14;
+  letter-spacing: -0.03em;
+  font-weight: 800;
+  color: var(--ink);
+  margin: 0;
+}
+
+/* ---------- how it works: horizontal scrub ---------- */
+.ml-steps {
+  padding: 46px 0 40px;
+  /* The track is wider than the screen by design — clip it here so the page
+     itself never scrolls sideways. */
+  overflow: hidden;
+}
+.ml-steps__head {
+  padding: 0 20px 20px;
+}
+/* Natively swipeable and snapping — the gesture a phone user already has,
+   with GSAP handling the depth as cards move away from centre. */
+.ml-steps__track {
+  display: flex;
+  gap: 14px;
+  padding: 6px 20px 10px;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.ml-steps__track::-webkit-scrollbar {
+  display: none;
+}
+.ml-step {
+  width: min(76vw, 320px);
+  flex-shrink: 0;
+  scroll-snap-align: center;
+  will-change: transform, opacity;
+  padding: 20px;
+  border-radius: 22px;
+  background: linear-gradient(
+    165deg,
+    rgba(255, 255, 255, 0.96),
+    rgba(255, 255, 255, 0.76)
+  );
+  border: 1px solid var(--ml-line);
+  box-shadow: 0 20px 40px -28px rgba(11, 61, 48, 0.5);
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+.ml-step__n {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--ml-faint);
+  letter-spacing: 0.1em;
+}
+.ml-step__icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  background: var(--green-50);
+  border: 1px solid rgba(34, 201, 157, 0.34);
+  color: var(--green-700);
+}
+.ml-step h3 {
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--ink);
+  margin: 0;
+}
+.ml-step p {
+  font-size: 0.86rem;
+  line-height: 1.55;
+  color: var(--ml-ink-2);
+  margin: 0;
+}
+
+.ml-dots {
+  display: flex;
+  justify-content: center;
+  gap: 7px;
+  padding-top: 12px;
+}
+.ml-dot {
+  width: 7px;
+  height: 7px;
+  padding: 0;
+  border: none;
+  border-radius: 999px;
+  background: rgba(18, 138, 109, 0.22);
+  cursor: pointer;
+  transition:
+    width 0.45s cubic-bezier(0.34, 1.56, 0.64, 1),
+    background 0.35s ease;
+}
+.ml-dot--on {
+  width: 22px;
+  background: var(--green-600);
+}
+
+/* ---------- scroll reveal (IntersectionObserver-driven) ----------
+   Visible by default; the class only adds the *animation*, so a missed
+   callback can never leave a section blank. */
+.ml-lift {
+  opacity: 0;
+  transform: translateY(30px);
+  transition:
+    opacity 0.7s var(--ease-out),
+    transform 0.7s var(--ease-out);
+}
+.ml-lift--in {
+  opacity: 1;
+  transform: none;
+}
+
+/* ---------- languages marquee ---------- */
+.ml-langs {
+  padding: 8px 0 42px;
+}
+.ml-marquee {
+  overflow: hidden;
+  padding: 4px 0;
+  -webkit-mask-image: linear-gradient(
+    90deg,
+    transparent,
+    #000 12%,
+    #000 88%,
+    transparent
+  );
+  mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
+}
+.ml-marquee__row {
+  display: flex;
+  gap: 10px;
+  width: max-content;
+  animation: ml-marquee 26s linear infinite;
+}
+.ml-marquee__row span {
+  padding: 8px 16px;
+  border-radius: var(--r-full);
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid var(--ml-line);
+  box-shadow: var(--shadow-1);
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--ml-ink);
+  white-space: nowrap;
+}
+@keyframes ml-marquee {
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+/* ---------- why ---------- */
+.ml-why {
+  padding: 8px 20px 44px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.ml-why__head {
+  margin-bottom: 4px;
+}
+.ml-feature {
+  display: flex;
+  gap: 13px;
+  padding: 16px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.88);
+  border: 1px solid var(--ml-line);
+  box-shadow: 0 16px 32px -28px rgba(11, 61, 48, 0.55);
+}
+.ml-feature__icon {
+  width: 38px;
+  height: 38px;
+  flex-shrink: 0;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  background: var(--green-50);
+  border: 1px solid rgba(34, 201, 157, 0.32);
+  color: var(--green-700);
+}
+.ml-feature h3 {
+  font-family: var(--font-display);
+  font-size: 0.98rem;
+  font-weight: 700;
+  color: var(--ink);
+  margin: 2px 0 5px;
+}
+.ml-feature p {
+  font-size: 0.85rem;
+  line-height: 1.55;
+  color: var(--ml-ink-2);
+  margin: 0;
+}
+
+/* Nav targets stop just below the top edge rather than touching it. */
+#ml-top,
+#ml-how,
+#ml-try,
+#ml-why,
+#ml-contact {
+  scroll-margin-top: 14px;
+}
+
+/* ---------- close ---------- */
+/* A full-height closing panel, which also guarantees the page has a screenful
+   of travel after the last section starts. Without that the page bottoms out
+   before "Why" reaches the top and the nav can't tell the two apart. */
+.ml-close {
+  padding: 10px 20px 40px;
+  min-height: 72vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 12px;
+  align-items: stretch;
+  text-align: center;
+}
+.ml-close p {
+  font-size: 0.9rem;
+  color: var(--ml-ink-2);
+  margin: -2px 0 4px;
+}
+
+/* ---------- footer (no second nav here) ---------- */
+.ml-footer {
+  padding: 26px 20px 8px;
+  border-top: 1px solid rgba(18, 138, 109, 0.18);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: flex-start;
+}
+.ml-footer p {
+  font-size: 0.84rem;
+  color: var(--ml-ink-2);
+  margin: 0;
+}
+.ml-footer__legal {
+  font-size: 0.72rem;
+  color: var(--ml-faint);
+}
+
+/* ---------- the single floating nav ---------- */
+.ml-nav {
+  position: fixed;
+  left: 14px;
+  right: 14px;
+  bottom: calc(14px + var(--safe-bottom));
+  z-index: 60;
+  display: flex;
+  padding: 6px;
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(20px) saturate(160%);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+  border: 1px solid rgba(18, 138, 109, 0.18);
+  box-shadow:
+    0 18px 40px -16px rgba(11, 61, 48, 0.38),
+    inset 0 1px 0 rgba(255, 255, 255, 0.95);
+  animation: rise-in var(--dur-slow) var(--ease-out);
+}
+/* The bubble is exactly one slot wide and springs between them. */
+.ml-nav__bubble {
+  position: absolute;
+  top: 6px;
+  bottom: 6px;
+  left: 6px;
+  width: calc((100% - 12px) / var(--ml-slots, 4));
+  border-radius: 17px;
+  background: linear-gradient(135deg, var(--green-600), var(--green-800));
+  box-shadow:
+    0 8px 18px -8px rgba(18, 114, 90, 0.7),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  transition: transform 0.55s cubic-bezier(0.34, 1.4, 0.5, 1);
+}
+.ml-nav__item {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  min-width: 0;
+  height: 50px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  border: none;
+  background: none;
+  padding: 0;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--muted);
+  transition: color 0.35s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.ml-nav__item svg {
+  transition: transform 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.ml-nav__item--on {
+  color: #fff;
+}
+.ml-nav__item--on svg {
+  transform: translateY(-1px) scale(1.12);
+}
+.ml-nav__item:active svg {
+  transform: scale(0.9);
+}
+
+/* ---------- motion-safe ---------- */
+@media (prefers-reduced-motion: reduce) {
+  .ml-marquee__row,
+  .ml-wave span,
+  .ml-live i,
+  .ml-card__dot {
+    animation: none;
+  }
+  .ml-lift,
+  .ml-hero [data-rise] {
+    opacity: 1;
+    transform: none;
+    transition: none;
+    animation: none;
+  }
+  .ml-dot {
+    transition: none;
+  }
+}
+
+/* ==========================================================================
+   TRY IT — scribe simulator + time-saving calculator
+   ========================================================================== */
+.ml-try {
+  padding: 8px 20px 44px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.ml-try__head {
+  margin-bottom: 2px;
+}
+.ml-try h3 {
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+  margin: 0 0 12px;
+}
+
+/* ---- scribe simulator ---- */
+.ml-sim {
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid var(--ml-line);
+  box-shadow: 0 22px 44px -30px rgba(11, 61, 48, 0.55);
+  overflow: hidden;
+}
+.ml-sim__bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--ml-line);
+  background: var(--green-50);
+}
+.ml-sim__who {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--green-800);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ml-sim__play {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  height: 34px;
+  padding: 0 14px;
+  border: none;
+  border-radius: var(--r-full);
+  background: linear-gradient(135deg, var(--green-600), var(--green-800));
+  color: #fff;
+  font-family: inherit;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 8px 18px -10px rgba(18, 114, 90, 0.8);
+  transition: transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.ml-sim__play:active {
+  transform: scale(0.94);
+}
+
+.ml-sim__stream {
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 168px;
+}
+.ml-sim__hint {
+  font-size: 0.84rem;
+  color: var(--faint);
+  margin: 0;
+}
+.ml-sim__line {
+  margin: 0;
+  padding: 9px 12px;
+  border-radius: 14px;
+  font-size: 0.84rem;
+  line-height: 1.5;
+  color: var(--ink-2);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  /* Lines exist from the start and fade up as the playhead reaches them. */
+  opacity: 0;
+  transform: translateY(10px);
+  transition:
+    opacity 0.45s var(--ease-out),
+    transform 0.45s var(--ease-out);
+}
+.ml-sim__line b {
+  display: block;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin-bottom: 2px;
+}
+.ml-sim__line--doctor {
+  border-color: rgba(18, 138, 109, 0.24);
+  background: rgba(232, 248, 242, 0.85);
+}
+.ml-sim__line--doctor b {
+  color: var(--green-700);
+}
+.ml-sim__line--patient b {
+  color: var(--muted);
+}
+.ml-sim__line--in {
+  opacity: 1;
+  transform: none;
+}
+
+.ml-sim__note {
+  margin: 0 14px 14px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: linear-gradient(160deg, var(--green-50), rgba(255, 255, 255, 0.9));
+  border: 1px dashed rgba(18, 138, 109, 0.34);
+  opacity: 0;
+  transform: translateY(12px) scale(0.985);
+  transition:
+    opacity 0.6s var(--ease-out),
+    transform 0.6s var(--ease-out);
+}
+.ml-sim__note--in {
+  opacity: 1;
+  transform: none;
+}
+.ml-sim__note-k {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.64rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--green-700);
+  margin-bottom: 6px;
+}
+.ml-sim__note p {
+  font-size: 0.82rem;
+  line-height: 1.5;
+  color: var(--ink-2);
+  margin: 0 0 4px;
+}
+.ml-sim__note p b {
+  display: block;
+  font-size: 0.64rem;
+  font-weight: 800;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+.ml-sim__note em {
+  font-family: var(--font-mono);
+  font-style: normal;
+  color: #a8620d;
+}
+.ml-sim__note ul {
+  margin: 6px 0 0;
+  padding-left: 16px;
+  font-size: 0.8rem;
+  line-height: 1.55;
+  color: var(--ink-2);
+}
+
+/* ---- time saved ---- */
+.ml-roi {
+  padding: 18px;
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid var(--ml-line);
+  box-shadow: 0 22px 44px -30px rgba(11, 61, 48, 0.55);
+}
+.ml-slider {
+  display: block;
+  margin-bottom: 14px;
+}
+.ml-slider span {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--ink-2);
+  margin-bottom: 7px;
+}
+.ml-slider b {
+  font-family: var(--font-display);
+  font-size: 1.02rem;
+  font-weight: 800;
+  color: var(--green-700);
+}
+.ml-slider input[type="range"] {
+  width: 100%;
+  height: 30px;
+  margin: 0;
+  background: transparent;
+  -webkit-appearance: none;
+  appearance: none;
+  cursor: pointer;
+}
+.ml-slider input[type="range"]::-webkit-slider-runnable-track {
+  height: 6px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--green-500), rgba(18, 138, 109, 0.18));
+}
+.ml-slider input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 24px;
+  height: 24px;
+  margin-top: -9px;
+  border-radius: 50%;
+  background: #fff;
+  border: 3px solid var(--green-600);
+  box-shadow: 0 4px 12px -3px rgba(18, 114, 90, 0.6);
+}
+.ml-slider input[type="range"]::-moz-range-track {
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(18, 138, 109, 0.18);
+}
+.ml-slider input[type="range"]::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #fff;
+  border: 3px solid var(--green-600);
+}
+
+.ml-roi__out {
+  display: flex;
+  align-items: stretch;
+  gap: 10px;
+  margin-top: 4px;
+}
+.ml-roi__big,
+.ml-roi__small {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 14px;
+  border-radius: 16px;
+  text-align: center;
+}
+.ml-roi__big {
+  background: linear-gradient(135deg, var(--green-600), var(--green-800));
+  color: #fff;
+  box-shadow: 0 14px 30px -14px rgba(18, 114, 90, 0.8);
+}
+.ml-roi__small {
+  background: var(--green-50);
+  border: 1px solid rgba(18, 138, 109, 0.22);
+  color: var(--green-800);
+}
+.ml-roi__out strong {
+  font-family: var(--font-display);
+  font-size: 1.7rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1;
+}
+.ml-roi__out span {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  opacity: 0.85;
+}
+.ml-roi__note {
+  font-size: 0.74rem;
+  line-height: 1.5;
+  color: var(--faint);
+  margin: 12px 0 0;
+}

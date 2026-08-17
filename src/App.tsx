@@ -11,8 +11,9 @@ import { AppLayout } from "@/components/layout/AppLayout";
 const LoginPage = lazy(() =>
   import("@/pages/LoginPage").then((m) => ({ default: m.LoginPage })),
 );
+// Picks the phone or desktop landing tree; only the chosen one is downloaded.
 const LandingPage = lazy(() =>
-  import("@/pages/LandingPage").then((m) => ({ default: m.LandingPage })),
+  import("@/pages/landing/LandingRoute").then((m) => ({ default: m.LandingRoute })),
 );
 const RegisterProfilePage = lazy(() =>
   import("@/pages/RegisterProfilePage").then((m) => ({

@@ -185,13 +185,65 @@
   min-width: 0;
 }
 
-/* When scrolled and space is tight, let the actions shrink */
+/* ---- Contracted navbar ----
+   The pill loses 120px of width on scroll. Squeezing the actions to absorb
+   that pushed the CTA against the pill's edge, and the links — which clip at
+   the end — silently dropped "Contact Us". So instead: the actions never
+   shrink, the CTA switches to its short label, and the links tighten. That
+   frees more room than the contraction costs, and everything stays legible
+   with real padding on both ends. */
+.mv-navbar-wrapper--scrolled .mv-navbar {
+  padding: 0 20px;
+  gap: 14px;
+}
 .mv-navbar-wrapper--scrolled .mv-navbar__actions {
-  flex-shrink: 1;
+  flex-shrink: 0;
+  gap: 8px;
+}
+.mv-navbar-wrapper--scrolled .mv-navbar__links {
+  gap: 14px;
+}
+.mv-navbar-wrapper--scrolled .mv-navbar__links a {
+  font-size: 0.8rem;
+}
+/* Seven links don't fit a narrower laptop — at rest OR contracted — and the
+   overflow silently ate "Contact Us" from the end. Shed the links that have a
+   section anchor further down the page before the ones people navigate to. */
+@media (max-width: 1200px) {
+  .mv-navbar__links a[href="#voice-agents"],
+  .mv-navbar__links a[href="#whatsapp"] {
+    display: none;
+  }
+}
+@media (max-width: 1080px) {
+  .mv-navbar__links a[href="#simulator"] {
+    display: none;
+  }
+  /* The at-rest bar is the tight one here: it carries the long CTA label. */
+  .mv-navbar {
+    gap: 12px;
+    padding: 0 18px;
+  }
+  .mv-navbar__links {
+    gap: 14px;
+  }
+}
+@media (max-width: 960px) {
+  .mv-navbar__links a[href="#vernacular"] {
+    display: none;
+  }
+}
+
+/* "Start Free Workspace" -> "Start Free" once contracted. */
+.mv-navbar-wrapper--scrolled .mv-cta-text--desktop {
+  display: none;
+}
+.mv-navbar-wrapper--scrolled .mv-cta-text--mobile {
+  display: inline;
 }
 .mv-navbar-wrapper--scrolled .mv-navbar__actions .mv-btn {
-  overflow: hidden;
-  text-overflow: ellipsis;
+  padding-left: 14px;
+  padding-right: 14px;
 }
 
 /* --------------------------------------------------------------------------

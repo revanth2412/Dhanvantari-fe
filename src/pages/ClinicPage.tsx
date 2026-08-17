@@ -1,12 +1,12 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import gsap from "gsap";
 import {
   Activity,
   Building2,
   CalendarClock,
   Check,
   ChevronRight,
-  ChevronsUpDown,
   Copy,
   Globe,
   MapPin,
@@ -14,7 +14,7 @@ import {
   Pencil,
   Phone,
   PhoneOff,
-  PlusCircle,
+  Plus,
   Search,
   ShieldCheck,
   ShieldX,
@@ -65,6 +65,8 @@ import { Drawer, Modal } from "@/components/ui/Modal";
 import { SkeletonRows } from "@/components/ui/Skeleton";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ClinicSetup } from "@/components/clinic/ClinicSetup";
+
+const reducedMotion = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 /* ---------------- edit clinic (clinic admin only) ---------------- */
 
@@ -163,20 +165,25 @@ function EditClinicDrawer({
 
 /* ---------------- page ---------------- */
 
+type Tab = "doctors" | "patients" | "activity";
+
 export function ClinicPage() {
   const { doctor, refreshProfile } = useAuth();
   const navigate = useNavigate();
   const toast = useToast();
   const cache = useDataCache();
+  const rootRef = useRef<HTMLElement | null>(null);
+
+  const [tab, setTab] = useState<Tab>("doctors");
   const [patientQuery, setPatientQuery] = useState("");
   const debouncedPatientQuery = useDebounce(patientQuery, 260);
   const [patientLimit, setPatientLimit] = useState(50);
   const [editOpen, setEditOpen] = useState(false);
   const [inviteOpen, setInviteOpen] = useState(false);
-  const [switcherOpen, setSwitcherOpen] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const [busyMember, setBusyMember] = useState<string | null>(null);
+  const [switching, setSwitching] = useState<string | null>(null);
 
   const clinicQuery = useCachedQuery<MyClinic | null>("clinic:me", getMyClinic);
   const clinic = clinicQuery.data ?? null;
@@ -192,9 +199,7 @@ export function ClinicPage() {
   const membersQuery = useCachedQuery<ClinicMember[]>(
     "clinic:members",
     getClinicMembers,
-    {
-      enabled: isClinicAdmin,
-    },
+    { enabled: isClinicAdmin },
   );
   const statsQuery = useCachedQuery<ClinicStats>("clinic:stats", getClinicStats, {
     enabled: isClinicAdmin,
@@ -204,14 +209,33 @@ export function ClinicPage() {
     getClinicConsultations,
     { enabled: isClinicAdmin },
   );
-  /* `GET /patients` without `mine` is widened to the whole clinic for a clinic
-     admin — that's the directory. The roster page passes `mine=true` for the
-     doctor's own patients; the full view belongs here. */
   const patientsQuery = useCachedQuery<Page<Patient>>(
     `patients:clinic:${debouncedPatientQuery.trim()}:${patientLimit}`,
     () => listPatients({ search: debouncedPatientQuery, limit: patientLimit }),
-    { enabled: isClinicAdmin },
+    { enabled: isClinicAdmin && tab === "patients" },
   );
+
+  /* Transform-only entrance: never gates whether content is visible. */
+  useEffect(() => {
+    const root = rootRef.current;
+    if (!root || reducedMotion()) return;
+    const ctx = gsap.context(() => {
+      gsap.from("[data-lift]", {
+        y: 20,
+        duration: 0.55,
+        stagger: 0.06,
+        ease: "power3.out",
+      });
+      gsap.from("[data-card]", {
+        y: 16,
+        duration: 0.5,
+        stagger: 0.05,
+        delay: 0.1,
+        ease: "power3.out",
+      });
+    }, root);
+    return () => ctx.revert();
+  }, []);
 
   async function copyCode() {
     if (!clinic) return;
@@ -226,10 +250,12 @@ export function ClinicPage() {
   }
 
   async function handleSwitch(clinicId: string) {
+    haptic("bubble");
+    setSwitching(clinicId);
     try {
       const next = await switchClinic(clinicId);
-      toast({ kind: "success", title: "Switched clinic", message: next.name });
-      setSwitcherOpen(false);
+      toast({ kind: "success", title: "Now working at", message: next.name });
+      // Every scoped list belongs to the old clinic — drop the lot.
       cache.invalidate();
       await refreshProfile();
     } catch (err) {
@@ -238,6 +264,8 @@ export function ClinicPage() {
         title: "Could not switch clinic",
         message: err instanceof Error ? err.message : undefined,
       });
+    } finally {
+      setSwitching(null);
     }
   }
 
@@ -296,7 +324,6 @@ export function ClinicPage() {
   const members = membersQuery.data ?? [];
   const stats = statsQuery.data;
   const consultations = consultationsQuery.data ?? [];
-  const otherClinics = memberships.filter((m) => m.clinic_id !== clinic.id);
   const clinicPatients = patientsQuery.data?.items ?? [];
   const clinicPatientTotal = patientsQuery.data?.total ?? 0;
 
@@ -323,448 +350,465 @@ export function ClinicPage() {
     patientActivity.set(item.patient_id, entry);
   }
 
-  return (
-    <main className="page page--wide">
-      <section className="clinic-hero">
-        <span className="clinic-hero__icon">
-          <Building2 size={24} />
-        </span>
-        <div className="clinic-hero__meta">
-          <h1>{clinic.name}</h1>
-          <p>
-            {[clinic.city, clinic.registration_no && `Reg. ${clinic.registration_no}`]
-              .filter(Boolean)
-              .join(" · ") || "Your clinic workspace"}
-          </p>
-          <div style={{ display: "flex", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
-            <Badge tone={isClinicAdmin ? "accent" : "info"}>
-              {isClinicAdmin ? "You're the clinic admin" : "Member"}
-            </Badge>
-            {!clinic.active && <Badge tone="danger">Suspended</Badge>}
-          </div>
-        </div>
+  const TABS: Array<{ id: Tab; label: string; count?: number }> = [
+    { id: "doctors", label: "Doctors", count: members.length },
+    { id: "patients", label: "Patients", count: stats?.patients_total },
+    { id: "activity", label: "Activity", count: stats?.consultations_total },
+  ];
 
-        <div className="clinic-hero__actions">
-          {otherClinics.length > 0 && (
-            <Button
-              onClick={() => setSwitcherOpen(true)}
-              style={{
-                background: "rgba(255,255,255,0.1)",
-                borderColor: "rgba(255,255,255,0.22)",
-                color: "#fff",
-              }}
-            >
-              <ChevronsUpDown size={15} /> Switch clinic
-            </Button>
-          )}
-          {/* A doctor may belong to several clinics — let them add another. */}
-          <Button
+  return (
+    <main className="page page--wide cl" ref={rootRef}>
+      {/* ---------------- clinic switcher ----------------
+          A doctor can practise at several clinics; switching is the first thing
+          on the page rather than something buried in a dialog. */}
+      <section className="cl-switch" aria-label="Your clinics" data-lift>
+        <div className="cl-switch__rail">
+          {memberships.map((m) => {
+            const usable = m.active && m.clinic_active;
+            const problem = !m.clinic_active
+              ? "Clinic suspended"
+              : !m.active
+                ? "You were removed"
+                : null;
+            return (
+              <button
+                key={m.clinic_id}
+                type="button"
+                className={`cl-chip ${m.is_current ? "cl-chip--on" : ""} ${
+                  problem ? "cl-chip--blocked" : ""
+                }`}
+                disabled={!usable || m.is_current || switching !== null}
+                aria-current={m.is_current ? "true" : undefined}
+                onClick={() => void handleSwitch(m.clinic_id)}
+                title={
+                  problem ?? (m.is_current ? "Current clinic" : `Switch to ${m.name}`)
+                }
+              >
+                <span className="cl-chip__icon">
+                  <Building2 size={15} />
+                </span>
+                <span className="cl-chip__text">
+                  <b>{m.name}</b>
+                  <small>{problem ?? m.city ?? "—"}</small>
+                </span>
+                {m.role === "admin" && <span className="cl-chip__role">admin</span>}
+                {switching === m.clinic_id && <span className="cl-chip__spin" />}
+              </button>
+            );
+          })}
+
+          <button
+            type="button"
+            className="cl-chip cl-chip--add"
             onClick={() => setAddOpen(true)}
-            style={{
-              background: "rgba(255,255,255,0.1)",
-              borderColor: "rgba(255,255,255,0.22)",
-              color: "#fff",
-            }}
           >
-            <PlusCircle size={15} /> Join another
-          </Button>
-          <div className="joincode">
-            <div>
-              <div className="joincode__label">Invite code</div>
-              <div className="joincode__value">{clinic.join_code}</div>
-            </div>
-            <Button
-              size="sm"
-              onClick={() => void copyCode()}
-              style={{
-                background: "rgba(255,255,255,0.12)",
-                borderColor: "rgba(255,255,255,0.25)",
-                color: "#fff",
-              }}
-            >
-              {copied ? <Check size={14} /> : <Copy size={14} />}
-              {copied ? "Copied" : "Copy"}
-            </Button>
-          </div>
+            <span className="cl-chip__icon">
+              <Plus size={15} />
+            </span>
+            <span className="cl-chip__text">
+              <b>Join or create</b>
+              <small>Add another clinic</small>
+            </span>
+          </button>
         </div>
       </section>
 
-      {/* Clinic-wide activity — admins only (the API 403s otherwise). */}
-      {isClinicAdmin && (
-        <section className="stat-rail">
-          {[
-            ["Doctors", stats?.doctors_total, `${stats?.doctors_active ?? 0} active`],
-            ["Patients", stats?.patients_total, "In this clinic"],
-            [
-              "Consultations",
-              stats?.consultations_total,
-              `${stats?.consultations_last_7_days ?? 0} in last 7 days`,
-            ],
-            [
-              "Finalized",
-              stats?.consultations_finalized,
-              `${stats?.consultations_draft_ready ?? 0} awaiting review`,
-            ],
-          ].map(([label, value, detail]) => (
-            <div className="ui-card stat-card" key={label as string}>
-              <span className="stat-card__icon stat-card__icon--jade">
-                <Activity size={20} />
+      {/* ---------------- masthead ---------------- */}
+      <header className="cl-top" data-lift>
+        <div className="cl-id">
+          <span className="cl-id__mark">
+            <Building2 size={22} />
+          </span>
+          <div className="cl-id__text">
+            <h1>{clinic.name}</h1>
+            <p className="cl-id__meta">
+              <span>{clinic.city ?? "City not set"}</span>
+              <i />
+              <span className="cl-mono">
+                {clinic.registration_no
+                  ? `Reg. ${clinic.registration_no}`
+                  : "No reg. no."}
               </span>
-              <div>
-                <div className="stat-card__value">{value ?? "—"}</div>
-                <div className="stat-card__label">
-                  {label}
-                  <div className="faint" style={{ fontSize: "0.72rem" }}>
-                    {detail}
-                  </div>
-                </div>
-              </div>
-            </div>
-          ))}
-        </section>
-      )}
+              <i />
+              <span>
+                {isClinicAdmin ? "You administer this clinic" : "You're a member"}
+              </span>
+              {!clinic.active && (
+                <Badge tone="danger" dot>
+                  suspended
+                </Badge>
+              )}
+            </p>
+          </div>
 
-      <div className="pt-cols">
-        <div className="ui-card ui-card--pad">
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              marginBottom: 10,
-            }}
-          >
-            <h2 style={{ fontSize: "0.98rem" }}>Details</h2>
+          <div className="cl-id__actions">
             {isClinicAdmin && (
               <Button size="sm" onClick={() => setEditOpen(true)}>
                 <Pencil size={14} /> Edit
               </Button>
             )}
-          </div>
-          <div className="pt-facts">
-            <div className="pt-fact">
-              <span className="pt-fact__k">
-                <Phone size={13} /> Phone
-              </span>
-              <span className="pt-fact__v">{clinic.phone ?? "—"}</span>
-            </div>
-            <div className="pt-fact">
-              <span className="pt-fact__k">
-                <MapPin size={13} /> Address
-              </span>
-              <span className="pt-fact__v">{clinic.address ?? "—"}</span>
-            </div>
-            <div className="pt-fact">
-              <span className="pt-fact__k">City</span>
-              <span className="pt-fact__v">{clinic.city ?? "—"}</span>
-            </div>
-            <div className="pt-fact">
-              <span className="pt-fact__k">Created</span>
-              <span className="pt-fact__v">{formatDate(clinic.created_at)}</span>
-            </div>
-          </div>
-          {!isClinicAdmin && (
-            <p className="ui-field__hint" style={{ marginTop: 12 }}>
-              You see the patients and consultations you create. A clinic admin sees
-              everything in the clinic.
-            </p>
-          )}
-        </div>
-
-        <div className="ui-card">
-          <div className="panel-head" style={{ paddingBottom: 12 }}>
-            <h2 style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <Users size={16} style={{ color: "var(--primary)" }} /> Doctors
-              {members.length > 0 && <Badge tone="ok">{members.length}</Badge>}
-            </h2>
             <Button size="sm" variant="primary" onClick={() => setInviteOpen(true)}>
-              <UserPlus size={14} /> Add doctor
+              <UserPlus size={14} /> Invite
             </Button>
           </div>
+        </div>
 
-          {!isClinicAdmin ? (
-            <EmptyState
-              icon={<ShieldCheck size={22} />}
-              title="Only clinic admins see the member list"
-              message="Share the invite code above to bring a colleague into this clinic."
-            />
-          ) : membersQuery.loading ? (
-            <SkeletonRows rows={3} height={52} />
-          ) : members.length === 0 ? (
-            <EmptyState
-              icon={<Users size={22} />}
-              title="No colleagues yet"
-              message="Share your invite code and they'll appear here once they join."
-            />
-          ) : (
-            members.map((member) => {
-              const isSelf = member.doctor_id === doctor?.id;
-              const busy = busyMember === member.doctor_id;
-              return (
-                <div className="member-row" key={member.doctor_id}>
-                  <Avatar name={member.full_name} size={38} />
-                  <div className="member-row__meta">
-                    <div className="member-row__name">
-                      {member.full_name}
-                      {isSelf && (
-                        <span style={{ marginLeft: 8 }}>
-                          <Badge>you</Badge>
-                        </span>
+        {/* The invite code, as a tear-off ticket rather than another pill. */}
+        <div className="cl-ticket">
+          <div className="cl-ticket__stub">Invite code</div>
+          <code>{clinic.join_code}</code>
+          <button type="button" onClick={() => void copyCode()} aria-label="Copy code">
+            {copied ? <Check size={15} /> : <Copy size={15} />}
+            {copied ? "Copied" : "Copy"}
+          </button>
+        </div>
+      </header>
+
+      {/* ---------------- facts + numbers ---------------- */}
+      <section className="cl-facts" data-card>
+        <dl className="cl-facts__list">
+          <div>
+            <dt>
+              <Phone size={12} /> Phone
+            </dt>
+            <dd>{clinic.phone ?? "—"}</dd>
+          </div>
+          <div>
+            <dt>
+              <MapPin size={12} /> Address
+            </dt>
+            <dd>{clinic.address ?? "—"}</dd>
+          </div>
+          <div>
+            <dt>
+              <CalendarClock size={12} /> Opened
+            </dt>
+            <dd>{formatDate(clinic.created_at)}</dd>
+          </div>
+        </dl>
+
+        {isClinicAdmin && (
+          <div className="cl-nums">
+            {[
+              ["Doctors", stats?.doctors_total, `${stats?.doctors_active ?? 0} active`],
+              ["Patients", stats?.patients_total, "registered here"],
+              [
+                "Consultations",
+                stats?.consultations_total,
+                `${stats?.consultations_last_7_days ?? 0} in 7 days`,
+              ],
+              [
+                "Finalized",
+                stats?.consultations_finalized,
+                `${stats?.consultations_draft_ready ?? 0} awaiting review`,
+              ],
+            ].map(([label, value, detail]) => (
+              <div key={label as string}>
+                <strong>{value ?? "—"}</strong>
+                <span>{label}</span>
+                <small>{detail}</small>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+
+      {!isClinicAdmin ? (
+        <section className="ui-card ui-card--pad cl-member-note" data-card>
+          <ShieldCheck size={20} />
+          <div>
+            <strong>You see your own patients and consultations.</strong>
+            <p className="muted">
+              Clinic-wide lists are for the clinic&rsquo;s admins. Share the invite code
+              above to bring a colleague in.
+            </p>
+          </div>
+        </section>
+      ) : (
+        <>
+          {/* ---------------- tabs ---------------- */}
+          <div className="cl-tabs" role="tablist" data-card>
+            {TABS.map((t) => (
+              <button
+                key={t.id}
+                type="button"
+                role="tab"
+                aria-selected={tab === t.id}
+                className={`cl-tab ${tab === t.id ? "cl-tab--on" : ""}`}
+                onClick={() => {
+                  haptic("bubble");
+                  setTab(t.id);
+                }}
+              >
+                {t.label}
+                {t.count !== undefined && <span>{t.count}</span>}
+              </button>
+            ))}
+          </div>
+
+          <div className="ui-card cl-panel" data-card>
+            {/* ---- doctors ---- */}
+            {tab === "doctors" &&
+              (membersQuery.loading ? (
+                <SkeletonRows rows={4} height={52} />
+              ) : members.length === 0 ? (
+                <EmptyState
+                  icon={<Users size={22} />}
+                  title="No colleagues yet"
+                  message="Share your invite code and they'll appear here once they join."
+                />
+              ) : (
+                members.map((member) => {
+                  const isSelf = member.doctor_id === doctor?.id;
+                  const busy = busyMember === member.doctor_id;
+                  return (
+                    <div className="member-row" key={member.doctor_id}>
+                      <Avatar name={member.full_name} size={38} />
+                      <div className="member-row__meta">
+                        <div className="member-row__name">
+                          {member.full_name}
+                          {isSelf && (
+                            <span style={{ marginLeft: 8 }}>
+                              <Badge>you</Badge>
+                            </span>
+                          )}
+                        </div>
+                        <div className="member-row__sub">
+                          {[member.specialty, member.email].filter(Boolean).join(" · ") ||
+                            "—"}
+                          {" · joined "}
+                          {formatDate(member.joined_at)}
+                        </div>
+                      </div>
+                      <div className="member-row__tags">
+                        {member.role === "admin" && (
+                          <Badge tone="accent">clinic admin</Badge>
+                        )}
+                        {!member.doctor_active ? (
+                          <Badge tone="danger" dot>
+                            account revoked
+                          </Badge>
+                        ) : (
+                          <Badge tone={member.active ? "ok" : "danger"} dot>
+                            {member.active ? "active" : "removed"}
+                          </Badge>
+                        )}
+                      </div>
+                      {!isSelf && (
+                        <div className="member-row__actions">
+                          {member.role !== "admin" && member.active && (
+                            <Button
+                              size="sm"
+                              loading={busy}
+                              disabled={busyMember !== null && !busy}
+                              onClick={() =>
+                                void memberAction(
+                                  member.doctor_id,
+                                  makeClinicMemberAdmin,
+                                  "Promoted to clinic admin",
+                                )
+                              }
+                            >
+                              <UserCog size={13} /> Make admin
+                            </Button>
+                          )}
+                          {member.active ? (
+                            <Button
+                              size="sm"
+                              variant="danger-soft"
+                              loading={busy}
+                              disabled={busyMember !== null && !busy}
+                              onClick={() =>
+                                void memberAction(
+                                  member.doctor_id,
+                                  revokeClinicMember,
+                                  "Removed from clinic",
+                                )
+                              }
+                            >
+                              <ShieldX size={13} /> Remove
+                            </Button>
+                          ) : (
+                            <Button
+                              size="sm"
+                              loading={busy}
+                              disabled={busyMember !== null && !busy}
+                              onClick={() =>
+                                void memberAction(
+                                  member.doctor_id,
+                                  activateClinicMember,
+                                  "Access restored",
+                                )
+                              }
+                            >
+                              <ShieldCheck size={13} /> Restore
+                            </Button>
+                          )}
+                        </div>
                       )}
                     </div>
-                    <div className="member-row__sub">
-                      {[member.specialty, member.email].filter(Boolean).join(" · ") ||
-                        "—"}
-                      {" · joined "}
-                      {formatDate(member.joined_at)}
-                    </div>
-                  </div>
-                  <div className="member-row__tags">
-                    {member.role === "admin" && <Badge tone="accent">clinic admin</Badge>}
-                    {!member.doctor_active ? (
-                      <Badge tone="danger" dot>
-                        account revoked
-                      </Badge>
-                    ) : (
-                      <Badge tone={member.active ? "ok" : "danger"} dot>
-                        {member.active ? "active" : "removed"}
-                      </Badge>
-                    )}
-                  </div>
-                  {!isSelf && (
-                    <div className="member-row__actions">
-                      {member.role !== "admin" && member.active && (
-                        <Button
-                          size="sm"
-                          loading={busy}
-                          disabled={busyMember !== null && !busy}
-                          onClick={() =>
-                            void memberAction(
-                              member.doctor_id,
-                              makeClinicMemberAdmin,
-                              "Promoted to clinic admin",
-                            )
-                          }
-                        >
-                          <UserCog size={13} /> Make admin
-                        </Button>
-                      )}
-                      {member.active ? (
-                        <Button
-                          size="sm"
-                          variant="danger-soft"
-                          loading={busy}
-                          disabled={busyMember !== null && !busy}
-                          onClick={() =>
-                            void memberAction(
-                              member.doctor_id,
-                              revokeClinicMember,
-                              "Removed from clinic",
-                            )
-                          }
-                        >
-                          <ShieldX size={13} /> Remove
-                        </Button>
-                      ) : (
-                        <Button
-                          size="sm"
-                          loading={busy}
-                          disabled={busyMember !== null && !busy}
-                          onClick={() =>
-                            void memberAction(
-                              member.doctor_id,
-                              activateClinicMember,
-                              "Access restored",
-                            )
-                          }
-                        >
-                          <Check size={13} /> Restore
-                        </Button>
-                      )}
-                    </div>
+                  );
+                })
+              ))}
+
+            {/* ---- patients ---- */}
+            {tab === "patients" && (
+              <>
+                <div className="clinic-pt-search">
+                  <Search size={15} />
+                  <input
+                    type="text"
+                    value={patientQuery}
+                    onChange={(e) => setPatientQuery(e.target.value)}
+                    placeholder="Search clinic patients by name or phone…"
+                    aria-label="Search clinic patients"
+                  />
+                  {patientQuery && (
+                    <button type="button" onClick={() => setPatientQuery("")}>
+                      ×
+                    </button>
                   )}
                 </div>
-              );
-            })
-          )}
-        </div>
-      </div>
 
-      {/* ---------- every patient in the clinic (clinic admin only) ---------- */}
-      {isClinicAdmin && (
-        <section style={{ marginTop: 16 }}>
-          <div className="panel-head" style={{ padding: "0 0 12px" }}>
-            <h2 style={{ fontSize: "1rem" }}>Clinic patients</h2>
-            <span className="muted" style={{ fontSize: "0.8rem" }}>
-              Everyone registered at {clinic.name}
-            </span>
-          </div>
-
-          <div className="ui-card" style={{ overflow: "hidden" }}>
-            <div className="clinic-pt-search">
-              <Search size={15} />
-              <input
-                type="text"
-                value={patientQuery}
-                onChange={(e) => setPatientQuery(e.target.value)}
-                placeholder="Search clinic patients by name or phone…"
-                aria-label="Search clinic patients"
-              />
-              {patientQuery && (
-                <button type="button" onClick={() => setPatientQuery("")}>
-                  ×
-                </button>
-              )}
-            </div>
-
-            {patientsQuery.loading ? (
-              <SkeletonRows rows={5} height={62} />
-            ) : clinicPatients.length === 0 ? (
-              <EmptyState
-                icon={<Users size={22} />}
-                title={patientQuery ? "No patients match" : "No patients registered yet"}
-                message={
-                  patientQuery
-                    ? "Try a different name or phone number."
-                    : "They'll appear here as your doctors register them."
-                }
-              />
-            ) : (
-              clinicPatients.map((patient) => {
-                const activity = patientActivity.get(patient.id);
-                const seenBy = [...(activity?.doctorIds ?? [])].map(doctorNameFor);
-                return (
-                  <div className="clinic-pt-row" key={patient.id}>
-                    <Avatar name={patient.full_name} size={38} />
-
-                    <div className="clinic-pt-main">
-                      <div className="clinic-pt-name">
-                        {patient.full_name}
-                        {patient.do_not_call && (
-                          <span className="clinic-pt-flag" title="Do not call">
-                            <PhoneOff size={11} /> Do not call
-                          </span>
+                {patientsQuery.loading ? (
+                  <SkeletonRows rows={5} height={62} />
+                ) : clinicPatients.length === 0 ? (
+                  <EmptyState
+                    icon={<Users size={22} />}
+                    title={patientQuery ? "No patients match" : "No patients yet"}
+                    message={
+                      patientQuery
+                        ? "Try a different name or phone number."
+                        : "They'll appear here as your doctors register them."
+                    }
+                  />
+                ) : (
+                  <>
+                    {clinicPatients.map((patient) => {
+                      const activity = patientActivity.get(patient.id);
+                      const seenBy = [...(activity?.doctorIds ?? [])].map(doctorNameFor);
+                      return (
+                        <div className="clinic-pt-row" key={patient.id}>
+                          <Avatar name={patient.full_name} size={38} />
+                          <div className="clinic-pt-main">
+                            <div className="clinic-pt-name">
+                              {patient.full_name}
+                              {patient.do_not_call && (
+                                <span className="clinic-pt-flag" title="Do not call">
+                                  <PhoneOff size={11} /> Do not call
+                                </span>
+                              )}
+                            </div>
+                            <div className="clinic-pt-facts">
+                              <span>
+                                {[ageFromDob(patient.dob), patient.gender]
+                                  .filter(Boolean)
+                                  .join(" · ") || "Age not recorded"}
+                              </span>
+                              <span>
+                                <Phone size={11} /> {patient.phone ?? "No phone"}
+                              </span>
+                              <span>
+                                <Globe size={11} /> {patient.language_pref ?? "English"}
+                              </span>
+                              <span>
+                                <CalendarClock size={11} /> Registered{" "}
+                                {formatDate(patient.created_at)}
+                              </span>
+                            </div>
+                            <div className="clinic-pt-facts clinic-pt-facts--care">
+                              <span>
+                                <Activity size={11} /> {activity?.count ?? 0} consultation
+                                {activity?.count === 1 ? "" : "s"}
+                              </span>
+                              {activity?.last && (
+                                <span>Last visit {formatDate(activity.last)}</span>
+                              )}
+                              {seenBy.length > 0 && (
+                                <span>
+                                  <Stethoscope size={11} /> Seen by {seenBy.join(", ")}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          <div className="clinic-pt-actions">
+                            <Button
+                              size="sm"
+                              onClick={() =>
+                                navigate(`/consultations/new?patient_id=${patient.id}`)
+                              }
+                              title="Start a consultation with this patient"
+                            >
+                              <Mic size={14} /> Consult
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              iconOnly
+                              onClick={() => navigate(`/patients/${patient.id}`)}
+                              aria-label={`Open ${patient.full_name}'s chart`}
+                              title="Open the full chart"
+                            >
+                              <ChevronRight size={16} />
+                            </Button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                    <div className="pts-foot cl-foot">
+                      <span className="muted">
+                        Showing {clinicPatients.length} of {clinicPatientTotal}
+                      </span>
+                      {clinicPatients.length < clinicPatientTotal &&
+                        patientLimit < 200 && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => setPatientLimit((n) => Math.min(n + 50, 200))}
+                          >
+                            Load more
+                          </Button>
                         )}
-                      </div>
-                      <div className="clinic-pt-facts">
-                        <span>
-                          {[ageFromDob(patient.dob), patient.gender]
-                            .filter(Boolean)
-                            .join(" · ") || "Age not recorded"}
-                        </span>
-                        <span>
-                          <Phone size={11} /> {patient.phone ?? "No phone"}
-                        </span>
-                        <span>
-                          <Globe size={11} /> {patient.language_pref ?? "English"}
-                        </span>
-                        <span>
-                          <CalendarClock size={11} /> Registered{" "}
-                          {formatDate(patient.created_at)}
-                        </span>
-                      </div>
-                      <div className="clinic-pt-facts clinic-pt-facts--care">
-                        <span>
-                          <Activity size={11} /> {activity?.count ?? 0} consultation
-                          {activity?.count === 1 ? "" : "s"}
-                        </span>
-                        {activity?.last && (
-                          <span>Last visit {formatDate(activity.last)}</span>
-                        )}
-                        {seenBy.length > 0 && (
-                          <span>
-                            <Stethoscope size={11} /> Seen by {seenBy.join(", ")}
-                          </span>
-                        )}
-                      </div>
                     </div>
-
-                    <div className="clinic-pt-actions">
-                      <Button
-                        size="sm"
-                        onClick={() =>
-                          navigate(`/consultations/new?patient_id=${patient.id}`)
-                        }
-                        title="Start a consultation with this patient"
-                      >
-                        <Mic size={14} /> Consult
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        iconOnly
-                        onClick={() => navigate(`/patients/${patient.id}`)}
-                        aria-label={`Open ${patient.full_name}'s chart`}
-                        title="Open the full chart"
-                      >
-                        <ChevronRight size={16} />
-                      </Button>
-                    </div>
-                  </div>
-                );
-              })
+                  </>
+                )}
+              </>
             )}
-          </div>
-          {clinicPatients.length > 0 && (
-            <div className="pts-foot">
-              <span className="muted">
-                Showing {clinicPatients.length} of {clinicPatientTotal}
-              </span>
-              {clinicPatients.length < clinicPatientTotal && patientLimit < 200 && (
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => setPatientLimit((n) => Math.min(n + 50, 200))}
-                >
-                  Load more
-                </Button>
-              )}
-            </div>
-          )}
-        </section>
-      )}
 
-      {isClinicAdmin && (
-        <section style={{ marginTop: 16 }}>
-          <div className="panel-head" style={{ padding: "0 0 12px" }}>
-            <h2 style={{ fontSize: "1rem" }}>Clinic consultations</h2>
-            <span className="muted" style={{ fontSize: "0.8rem" }}>
-              Every doctor in {clinic.name}
-            </span>
-          </div>
-          <div className="ui-card" style={{ overflow: "hidden" }}>
-            {consultationsQuery.loading ? (
-              <SkeletonRows rows={4} height={52} />
-            ) : consultations.length === 0 ? (
-              <EmptyState
-                icon={<Activity size={22} />}
-                title="No consultations yet"
-                message="They'll appear here as your doctors record them."
-              />
-            ) : (
-              consultations.slice(0, 25).map((item) => {
-                const meta = consultationStatusMeta[item.status];
-                return (
-                  <div className="member-row" key={item.id}>
-                    <Avatar name={item.patient_name} size={34} />
-                    <div className="member-row__meta">
-                      <div className="member-row__name">
-                        {item.patient_name ?? "Patient"}
+            {/* ---- activity ---- */}
+            {tab === "activity" &&
+              (consultationsQuery.loading ? (
+                <SkeletonRows rows={4} height={52} />
+              ) : consultations.length === 0 ? (
+                <EmptyState
+                  icon={<Activity size={22} />}
+                  title="No consultations yet"
+                  message="They'll appear here as your doctors record them."
+                />
+              ) : (
+                consultations.slice(0, 40).map((item) => {
+                  const meta = consultationStatusMeta[item.status];
+                  return (
+                    <div className="member-row" key={item.id}>
+                      <Avatar name={item.patient_name} size={34} />
+                      <div className="member-row__meta">
+                        <div className="member-row__name">
+                          {item.patient_name ?? "Patient"}
+                        </div>
+                        <div className="member-row__sub">
+                          {formatDateTime(item.created_at)} · conducted by{" "}
+                          {doctorNameFor(item.doctor_id)}
+                        </div>
                       </div>
-                      <div className="member-row__sub">
-                        {formatDateTime(item.created_at)} · conducted by{" "}
-                        {doctorNameFor(item.doctor_id)}
-                      </div>
+                      <Badge tone={meta.tone} dot>
+                        {meta.label}
+                      </Badge>
                     </div>
-                    <Badge tone={meta.tone} dot>
-                      {meta.label}
-                    </Badge>
-                  </div>
-                );
-              })
-            )}
+                  );
+                })
+              ))}
           </div>
-        </section>
+        </>
       )}
 
       {isClinicAdmin && (
@@ -785,8 +829,8 @@ export function ClinicPage() {
         maxWidth={600}
       >
         <p style={{ color: "var(--ink-2)", fontSize: "0.9rem", marginBottom: 14 }}>
-          You can practise at more than one clinic. Adding one switches you to it — use{" "}
-          <strong>Switch clinic</strong> to move back at any time.
+          You can practise at more than one clinic. Adding one switches you to it — the
+          rail at the top of this page moves you back.
         </p>
         <ClinicSetup
           bare
@@ -796,55 +840,6 @@ export function ClinicPage() {
             void refreshProfile();
           }}
         />
-      </Modal>
-
-      <Modal
-        open={switcherOpen}
-        onClose={() => setSwitcherOpen(false)}
-        title="Switch clinic"
-        footer={
-          <Button
-            variant="soft"
-            onClick={() => {
-              setSwitcherOpen(false);
-              setAddOpen(true);
-            }}
-          >
-            <PlusCircle size={15} /> Join another clinic
-          </Button>
-        }
-      >
-        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          {memberships.map((m) => {
-            const usable = m.active && m.clinic_active;
-            return (
-              <button
-                key={m.clinic_id}
-                type="button"
-                className={`pt-pick ${m.is_current ? "pt-pick--selected" : ""}`}
-                disabled={!usable || m.is_current}
-                onClick={() => void handleSwitch(m.clinic_id)}
-              >
-                <span className="clinic-row__icon">
-                  <Building2 size={17} />
-                </span>
-                <span style={{ flex: 1, minWidth: 0 }}>
-                  <span style={{ display: "block", fontWeight: 600 }}>{m.name}</span>
-                  <span className="muted" style={{ fontSize: "0.8rem" }}>
-                    {m.city ?? "—"}
-                    {!m.clinic_active
-                      ? " · clinic suspended"
-                      : !m.active
-                        ? " · you were removed"
-                        : ""}
-                  </span>
-                </span>
-                {m.role === "admin" && <Badge tone="accent">admin</Badge>}
-                {m.is_current && <Badge tone="ok">current</Badge>}
-              </button>
-            );
-          })}
-        </div>
       </Modal>
 
       <Modal
@@ -863,28 +858,14 @@ export function ClinicPage() {
           </>
         }
       >
-        <p style={{ color: "var(--ink-2)", fontSize: "0.92rem" }}>
-          Doctors join themselves — send them this invite code and they&rsquo;ll enter it
-          when they sign up, or from their own Clinic page. They can start working
-          immediately; no approval step.
+        <p style={{ color: "var(--ink-2)", fontSize: "0.92rem", marginBottom: 14 }}>
+          Colleagues join by signing up and entering this code — no invitation email
+          needed. They land in <strong>{clinic.name}</strong> as a regular doctor; you can
+          promote them afterwards.
         </p>
-        <div
-          className="joincode"
-          style={{
-            marginTop: 14,
-            background: "var(--primary-soft)",
-            borderColor: "var(--green-300)",
-            justifyContent: "center",
-          }}
-        >
-          <div style={{ textAlign: "center" }}>
-            <div className="joincode__label" style={{ color: "var(--muted)" }}>
-              Invite code
-            </div>
-            <div className="joincode__value" style={{ color: "var(--primary-strong)" }}>
-              {clinic.join_code}
-            </div>
-          </div>
+        <div className="cl-ticket cl-ticket--lg">
+          <div className="cl-ticket__stub">Invite code</div>
+          <code>{clinic.join_code}</code>
         </div>
       </Modal>
     </main>
