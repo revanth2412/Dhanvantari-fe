@@ -2422,11 +2422,71 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: 10px;
   padding: 10px 16px;
   flex-wrap: wrap;
   backdrop-filter: blur(8px);
   background: rgba(255, 255, 255, 0.92);
+}
+
+/* Two distributed zones in the toolbar */
+.note-toolbar__zone {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  flex-wrap: wrap;
+}
+.note-toolbar__zone--left {
+  flex: 1 1 0%;
+  min-width: 200px;
+}
+.note-toolbar__zone--right {
+  flex: 0 1 auto;
+  justify-content: flex-end;
+  min-width: 0;
+}
+
+/* ---------- follow-up chip ---------- */
+.fu-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: var(--r-full);
+  background: var(--info-soft);
+  border: 1px solid rgba(56, 152, 236, 0.25);
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: var(--info);
+  white-space: nowrap;
+}
+.fu-chip__icon {
+  flex-shrink: 0;
+  opacity: 0.7;
+}
+.fu-chip__label {
+  font-weight: 700;
+}
+.fu-chip__date {
+  color: var(--ink-2);
+  font-weight: 600;
+}
+.fu-chip__days {
+  font-weight: 800;
+  padding: 1px 7px;
+  border-radius: var(--r-full);
+  background: rgba(56, 152, 236, 0.12);
+  color: var(--info);
+  font-size: 0.7rem;
+}
+.fu-chip__days--soon {
+  background: rgba(232, 149, 36, 0.14);
+  color: var(--saffron-700, #a8620d);
+}
+.fu-chip__days--overdue {
+  background: var(--danger-soft);
+  color: var(--danger);
 }
 
 /* 12-column dashboard layout: every section has a designed width and shares
@@ -4665,9 +4725,18 @@
     gap: 10px;
     padding: 10px 12px;
   }
-  .note-toolbar__meta {
+  .note-toolbar__zone {
+    flex: 1 1 100%;
+    min-width: 0;
+  }
+  .note-toolbar__zone--left {
     gap: 8px;
     row-gap: 6px;
+  }
+  .note-toolbar__zone--right {
+    justify-content: flex-start;
+    gap: 8px;
+    flex-wrap: wrap;
   }
   .note-ident {
     flex: 1 1 auto;
@@ -4676,23 +4745,18 @@
     order: 10;
     flex-basis: 100%;
   }
-  .note-toolbar__meta .ui-badge {
+  .note-toolbar__zone--left .ui-badge {
     font-size: 0.68rem;
     padding: 2px 8px;
     flex-shrink: 0;
   }
-  .note-toolbar__meta .conf-ring,
-  .note-toolbar__meta .conf-ring svg {
+  .note-toolbar__zone--right .conf-ring,
+  .note-toolbar__zone--right .conf-ring svg {
     width: 36px;
     height: 36px;
   }
-  .note-toolbar__meta .conf-ring__val {
+  .note-toolbar__zone--right .conf-ring__val {
     font-size: 0.65rem;
-  }
-  .note-toolbar__actions {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 8px;
   }
   .note-view-toggle {
     display: flex;
@@ -4787,16 +4851,21 @@
   .note-toolbar__ops .ui-btn {
     padding: 0;
   }
-  .note-toolbar__meta > .ui-avatar {
+  .note-toolbar__zone--left > .ui-avatar {
     display: none;
   }
-  .note-toolbar__meta .conf-ring,
-  .note-toolbar__meta .conf-ring svg {
+  .note-toolbar__zone--right .conf-ring,
+  .note-toolbar__zone--right .conf-ring svg {
     width: 30px;
     height: 30px;
   }
-  .note-toolbar__meta .conf-ring__val {
+  .note-toolbar__zone--right .conf-ring__val {
     font-size: 0.58rem;
+  }
+  .fu-chip {
+    font-size: 0.68rem;
+    padding: 3px 8px;
+    gap: 4px;
   }
 }
 

@@ -26,7 +26,6 @@ import {
   LayoutGrid,
   Leaf,
   Lightbulb,
-  Lock,
   MessageSquareQuote,
   NotebookPen,
   Pencil,
@@ -304,11 +303,14 @@ export function NotePanel({
   // the grid never has blank gaps and the doctor sees what wasn't captured.
   const has = noteHas(view);
 
-  // Follow-up is a header chip, not a section: the actual date, computed from
-  // the note's "after N days" relative to the consultation.
+  // Follow-up: compute the target date from the consultation, then derive
+  // how many days remain relative to *today* so it stays accurate.
   const fuDays = followUp?.required ? (followUp.after_days ?? null) : null;
   const fuDateIso = fuDays
     ? new Date(new Date(record.created_at).getTime() + fuDays * 86400000).toISOString()
+    : null;
+  const fuDaysLeft = fuDateIso
+    ? Math.ceil((new Date(fuDateIso).getTime() - Date.now()) / 86400000)
     : null;
 
   const headerSub = [ageFromDob(patient?.dob), patient?.gender, patient?.phone]
@@ -361,7 +363,8 @@ export function NotePanel({
     <div className={`note-shell ${editing ? "note-shell--editing" : ""}`}>
       {/* ---------- sticky toolbar ---------- */}
       <div className="ui-card note-topbar">
-        <div className="note-toolbar__meta">
+        {/* ——— Zone 1: Patient identity + view toggle (left) ——— */}
+        <div className="note-toolbar__zone note-toolbar__zone--left">
           <Button size="sm" variant="ghost" iconOnly onClick={onBack} aria-label="Back">
             <ArrowLeft size={16} />
           </Button>
@@ -375,32 +378,7 @@ export function NotePanel({
               <span className="note-ident__ver">{headerVersion}</span>
             </div>
           </div>
-          <div className="note-ident__tags">
-            <Badge tone={isFinal ? "ok" : "warn"} dot>
-              {isFinal ? "Final" : "Draft"}
-            </Badge>
-            {followUp?.required && (
-              <Badge tone="info">
-                <CalendarClock size={11} /> Follow-up{" "}
-                {fuDateIso ? `${formatDate(fuDateIso)} (in ${fuDays}d)` : "required"}
-              </Badge>
-            )}
-          </div>
-          <ConfidenceRing value={view.extraction_confidence ?? 0} />
-        </div>
-
-        <div className="note-toolbar__actions">
-          {/* Both views are editable, so the switch stays available in edit mode. */}
           <div className="note-view-toggle">
-            <button
-              type="button"
-              className={`note-view-toggle__btn ${viewMode === "soap" ? "note-view-toggle__btn--active" : ""}`}
-              onClick={() => setViewMode("soap")}
-              title="Clinical SOAP Note format (ICD-10 Coded)"
-            >
-              <BrainCircuit size={13} />
-              <span>Clinical SOAP</span>
-            </button>
             <button
               type="button"
               className={`note-view-toggle__btn ${viewMode === "standard" ? "note-view-toggle__btn--active" : ""}`}
@@ -410,8 +388,20 @@ export function NotePanel({
               <LayoutGrid size={13} />
               <span>Grid View</span>
             </button>
+            <button
+              type="button"
+              className={`note-view-toggle__btn ${viewMode === "soap" ? "note-view-toggle__btn--active" : ""}`}
+              onClick={() => setViewMode("soap")}
+              title="Clinical SOAP Note format (ICD-10 Coded)"
+            >
+              <BrainCircuit size={13} />
+              <span>Clinical SOAP</span>
+            </button>
           </div>
+        </div>
 
+        {/* ——— Zone 2: Ops + status + follow-up + confidence + actions (right) ——— */}
+        <div className="note-toolbar__zone note-toolbar__zone--right">
           <div className="note-toolbar__ops">
             <Button
               size="sm"
@@ -443,21 +433,44 @@ export function NotePanel({
               </Button>
             )}
           </div>
-
+          <div className="note-ident__tags">
+            <Badge tone={isFinal ? "ok" : "warn"} dot>
+              {isFinal ? "Final" : "Draft"}
+            </Badge>
+            {followUp?.required && (
+              <div className="fu-chip">
+                <CalendarClock size={12} className="fu-chip__icon" />
+                <span className="fu-chip__label">Follow-up</span>
+                {fuDateIso && (
+                  <span className="fu-chip__date">{formatDate(fuDateIso)}</span>
+                )}
+                {fuDaysLeft !== null && (
+                  <span
+                    className={`fu-chip__days ${
+                      fuDaysLeft <= 0
+                        ? "fu-chip__days--overdue"
+                        : fuDaysLeft <= 3
+                          ? "fu-chip__days--soon"
+                          : ""
+                    }`}
+                  >
+                    {fuDaysLeft <= 0
+                      ? fuDaysLeft === 0
+                        ? "today"
+                        : `${Math.abs(fuDaysLeft)}d overdue`
+                      : `${fuDaysLeft}d left`}
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
+          <ConfidenceRing value={view.extraction_confidence ?? 0} />
           <div className="note-toolbar__primary">{primaryActions()}</div>
         </div>
       </div>
 
       {/* Care-team provenance: who conducted the visit, who signed the note. */}
       <ConsultationProvenance consultation={consultation} record={record} />
-
-      {isFinal && (
-        <div className="final-banner">
-          <Lock size={17} />
-          Finalized {record.finalized_at ? formatDateTime(record.finalized_at) : ""} —
-          this record is locked and preserved.
-        </div>
-      )}
 
       {viewMode === "soap" ? (
         <SoapNoteView
@@ -470,32 +483,32 @@ export function NotePanel({
         />
       ) : (
         <div className="note-grid">
-          {/* ---------- red flags ---------- */}
-          <NSec
-            icon={<AlertOctagon size={16} />}
-            title="Red flags"
-            tone="danger"
-            tint={has.redFlags ? "danger" : undefined}
-            count={view.red_flags?.length}
-            span={12}
-          >
-            {editors ? (
-              <ChipEditor
-                items={editors.draft.red_flags ?? []}
-                onChange={(red_flags) => patch({ red_flags })}
-                placeholder="Add a red flag…"
-              />
-            ) : has.redFlags ? (
-              view.red_flags?.map((flag, i) => (
-                <div className="redflag" key={i}>
-                  <AlertOctagon size={16} className="redflag__icon" />
-                  {flag}
-                </div>
-              ))
-            ) : (
-              <p className="nsec__empty">None identified in this consultation.</p>
-            )}
-          </NSec>
+          {/* ---------- red flags (hidden when empty in view mode) ---------- */}
+          {(editors || has.redFlags) && (
+            <NSec
+              icon={<AlertOctagon size={16} />}
+              title="Red flags"
+              tone="danger"
+              tint={has.redFlags ? "danger" : undefined}
+              count={view.red_flags?.length}
+              span={12}
+            >
+              {editors ? (
+                <ChipEditor
+                  items={editors.draft.red_flags ?? []}
+                  onChange={(red_flags) => patch({ red_flags })}
+                  placeholder="Add a red flag…"
+                />
+              ) : (
+                view.red_flags?.map((flag, i) => (
+                  <div className="redflag" key={i}>
+                    <AlertOctagon size={16} className="redflag__icon" />
+                    {flag}
+                  </div>
+                ))
+              )}
+            </NSec>
+          )}
 
           {/* ---------- row: chief complaint + vitals ---------- */}
           <NSec icon={<MessageSquareQuote size={16} />} title="Chief complaint" span={7}>
